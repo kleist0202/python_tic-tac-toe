@@ -139,7 +139,7 @@ class TicTacToe:
                                               text="0", x=self.x_size-100, y=20, w=100, h=20)
         # new game button
         self.new_game_button = Button(
-            x=10, y=self.y_size-60, w=60, h=20, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray)
+            x=10, y=self.y_size-60, w=60, h=20, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=self.make_new_game)
 
         # return to menu button
         self.return_to_menu_button = Button(
@@ -179,9 +179,9 @@ class TicTacToe:
         self.port_entry.set_entry_value("8765")
 
         self.host_button = Button(
-            x=self.x_size/2-160, y=self.y_size/2-50, w=150, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray)
+            x=self.x_size/2-160, y=self.y_size/2-50, w=150, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray, func=self.host)
         self.connect_button = Button(
-            x=self.x_size/2 + 10, y=self.y_size/2-50, w=150, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray)
+            x=self.x_size/2 + 10, y=self.y_size/2-50, w=150, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
 
         self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
                                     text="---", x=self.x_size/2 - 50, y=20, w=100, h=20)
@@ -276,7 +276,7 @@ class TicTacToe:
             self.game_running = False
             self.win_screen.draw(screen, mouse_pos)
             self.new_game_button.draw(
-                screen, mouse_pos, mouse_button, self.make_new_game)
+                screen, mouse_pos, mouse_button)
         elif self.check_vertical(self.g, "O") or self.check_horizontal(self.g, "O") or self.check_diagonally(self.g, "O"):
             if self.game_running:
                 self.player2_points += 1
@@ -285,7 +285,7 @@ class TicTacToe:
             self.game_running = False
             self.win_screen.draw(screen, mouse_pos)
             self.new_game_button.draw(
-                screen, mouse_pos, mouse_button, self.make_new_game)
+                screen, mouse_pos, mouse_button)
         elif self.draw_check():
             if self.game_running:
                 self.win_screen.set_text("Draw")
@@ -293,7 +293,7 @@ class TicTacToe:
             self.game_running = False
             self.win_screen.draw(screen, mouse_pos)
             self.new_game_button.draw(
-                screen, mouse_pos, mouse_button, self.make_new_game)
+                screen, mouse_pos, mouse_button)
         else:
             pass
 
@@ -327,10 +327,10 @@ class TicTacToe:
         return True
 
     def draw_menu(self, screen, mouse_pos, mouse_button):
-        self.play_button.draw(screen, mouse_pos, mouse_button, self.play)
+        self.play_button.draw(screen, mouse_pos, mouse_button)
         self.multiplayer_button.draw(
             screen, mouse_pos, mouse_button, self.multiplayer)
-        self.quit_button.draw(screen, mouse_pos, mouse_button, self.quit)
+        self.quit_button.draw(screen, mouse_pos, mouse_button)
 
     def draw_multiplayer_menu(self, screen, mouse_pos, mouse_button, keys, delta_time):
         self.address_label.draw(screen, mouse_pos)
@@ -341,9 +341,9 @@ class TicTacToe:
             screen, mouse_pos, mouse_button, keys, delta_time)
 
         self.host_button.draw(screen, mouse_pos,
-                              mouse_button, self.host)
+                              mouse_button)
         self.connect_button.draw(
-            screen, mouse_pos, mouse_button, self.connect)
+            screen, mouse_pos, mouse_button)
 
     # ---------------- slots ---------------- #
 
