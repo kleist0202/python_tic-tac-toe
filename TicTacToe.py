@@ -1,14 +1,15 @@
 import pygame
-from gui import Color, rgb
 
+from gui import Color, rgb
 from gui import Frame, TextFrame, EntryWidget, Button
+from gui import GridLayout
 
 import asyncio
 import websockets
 
 
 class TicTacToe:
-    def __init__(self, screen_size):
+    def __init__(self, screen):
         self.grid_thickness = 5
         self.offset = 50
         self.squares_num = 3
@@ -32,55 +33,10 @@ class TicTacToe:
         self.is_running = []
 
         # init
-        self.x_size, self.y_size = screen_size
+        self.x_size, self.y_size = screen.get_size()
         self.calc_grid()
-        self.init()
-        self.window_size_changed()
-
-    def window_resize_callback(self, screen_size, func):
-        if self.x_size != screen_size[0]:
-            self.x_size = screen_size[0]
-            func()
-        elif self.y_size != screen_size[1]:
-            self.y_size = screen_size[1]
-            func()
-
-    def window_size_changed(self):
-        self.calc_grid()
-
-        # change positions when window is resized
-
-        # game
-        self.win_screen.set_pos(x=0, y=self.y_size/2-50/2)
-        self.win_screen.set_size(w=self.x_size, h=50)
-        self.info__player2.set_pos(x=self.x_size-100, y=0)
-        self.info__player2_points.set_pos(x=self.x_size-100, y=20)
-        self.new_game_button.set_pos(x=10, y=self.y_size-30)
-        self.return_to_menu_button.set_pos(self.x_size-110, self.y_size-30)
-
-        # menu
-        self.play_button.set_pos(self.x_size/2-200/2, self.y_size/2-90)
-        self.multiplayer_button.set_pos(
-            self.x_size/2-200/2, self.y_size/2-60/2)
-        self.quit_button.set_pos(self.x_size/2-200/2, self.y_size/2+60/2)
-
-        # multiplayer
-        self.address_label.set_pos(
-            self.x_size/2-350/2, self.y_size/2-175)
-
-        self.port_label.set_pos(
-            self.x_size/2 + 35, self.y_size/2-175)
-
-        self.host_button.set_pos(
-            self.x_size/2-160, self.y_size/2-50)
-        self.connect_button.set_pos(
-            self.x_size/2+10, self.y_size/2-50)
-
-        self.address_entry.set_pos(
-            self.x_size/2-320/2, self.y_size/2-150)
-        self.port_entry.set_pos(self.x_size/2 + 60, self.y_size/2-150)
-
-        self.whose_turn.set_pos(self.x_size/2 - 50, 20)
+        self.init(screen)
+        # self.window_size_changed()
 
     def create_game(self, screen, mouse_pos, mouse_button, keys, is_running, delta_time):
         self.window_resize_callback(
@@ -117,7 +73,7 @@ class TicTacToe:
 
         self.square_size = self.grid_size / self.squares_num
 
-    def init(self):
+    def init(self, screen):
         # place clickables
         for i in range(self.squares_num):
             for j in range(self.squares_num):
@@ -161,18 +117,18 @@ class TicTacToe:
 
         # multiplayer : host game, join to game, return
 
-        self.address_label = TextFrame(
-            x=self.x_size/2-350/2, y=self.y_size/2-175, w=100, h=20,
-            fill=Color.Gray, fontsize=14, bold=False, text="Address:")
+        self.multiplayer_menu_layout = GridLayout(screen, "C")
 
-        self.port_label = TextFrame(
-            x=self.x_size/2 + 35, y=self.y_size/2-175, w=100, h=20,
-            fill=Color.Gray, fontsize=14, bold=False, text="Port:")
+        self.address_label = TextFrame(w=100, h=20,
+                                       fill=Color.Red, fontsize=14, bold=False, text="Address:")
 
-        self.address_entry = EntryWidget(
-            x=self.x_size/2-320/2, y=self.y_size/2-150, w=200, h=50)
-        self.port_entry = EntryWidget(x=self.x_size/2 + 60,
-                                      y=self.y_size/2-150, w=100, h=50)
+        self.port_label = TextFrame(w=100, h=20,
+                                    fill=Color.Red, fontsize=14, bold=False, text="Port:")
+
+        self.misja = TextFrame(w=200, h=20,
+                               fill=Color.Blue, fontsize=14, bold=False, text="misja:")
+        self.address_entry = EntryWidget(w=200, h=50)
+        self.port_entry = EntryWidget(w=150, h=50)
 
         # default entry values
         self.address_entry.set_entry_value("localhost")
@@ -182,6 +138,13 @@ class TicTacToe:
             x=self.x_size/2-160, y=self.y_size/2-50, w=150, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray, func=self.host)
         self.connect_button = Button(
             x=self.x_size/2 + 10, y=self.y_size/2-50, w=150, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
+
+        self.multiplayer_menu_layout.add_widget(self.address_label, 0, 0)
+        self.multiplayer_menu_layout.add_widget(self.port_label, 0, 1)
+        self.multiplayer_menu_layout.add_widget(self.misja, 1, 0)
+        self.multiplayer_menu_layout.add_widget(self.address_entry, 0, 2)
+
+        self.multiplayer_menu_layout.add_widget(self.port_entry, 0, 3)
 
         self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
                                     text="---", x=self.x_size/2 - 50, y=20, w=100, h=20)
@@ -333,17 +296,20 @@ class TicTacToe:
         self.quit_button.draw(screen, mouse_pos, mouse_button)
 
     def draw_multiplayer_menu(self, screen, mouse_pos, mouse_button, keys, delta_time):
-        self.address_label.draw(screen, mouse_pos)
-        self.port_label.draw(screen, mouse_pos)
-        self.address_entry.draw(
-            screen, mouse_pos, mouse_button, keys, delta_time)
-        self.port_entry.draw(
-            screen, mouse_pos, mouse_button, keys, delta_time)
+        self.multiplayer_menu_layout.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
+        pass
+        #self.address_label.draw(screen, mouse_pos)
+        #self.port_label.draw(screen, mouse_pos)
+        # self.address_entry.draw(
+        #    screen, mouse_pos, mouse_button, keys, delta_time)
+        # self.port_entry.draw(
+        #    screen, mouse_pos, mouse_button, keys, delta_time)
 
-        self.host_button.draw(screen, mouse_pos,
-                              mouse_button)
-        self.connect_button.draw(
-            screen, mouse_pos, mouse_button)
+        # self.host_button.draw(screen, mouse_pos,
+        #                      mouse_button)
+        # self.connect_button.draw(
+        #    screen, mouse_pos, mouse_button)
 
     # ---------------- slots ---------------- #
 
