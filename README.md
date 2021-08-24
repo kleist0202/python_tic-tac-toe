@@ -1,6 +1,6 @@
 # General info
 Tic-Tac-Toe game for two players written in Python.
-It is using ```websockets``` module for communication.
+It uses ```websockets``` module for communication.
 # Setup
 To run this project you need pygame and websockets:
 ```
