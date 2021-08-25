@@ -56,17 +56,27 @@ class VLayout(Layout):
             widget.draw(self.screen, mouse_pos, mouse_button, keys, delta_time)
 
     def put(self, widget, ypadd):
-
+        # jesus... this code is too complicated and probably bloated
+        # at least it works
         for i, widget in enumerate(self.widgets):
             curr_w, curr_h = widget.get_size()
 
+            # bloated
             if self.orientation == "C":
                 if i == 0:
                     self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]/2
+
                 self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no need to bloat
             elif self.orientation == "N":
                 if i == 0:
                     self.curr_y = self.y_start
@@ -74,27 +84,49 @@ class VLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "S":
                 if i == 0:
                     self.curr_y = self.y_size - curr_h + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]
                 self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "W":
                 if i == 0:
                     self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]/2
                 self.curr_x = self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "E":
                 if i == 0:
                     self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]/2
                 self.curr_x = self.x_size - curr_w + self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no need to bloat
             elif self.orientation in ["EN", "NE"]:
                 if i == 0:
                     self.curr_y = self.y_start
@@ -102,6 +134,7 @@ class VLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no need to bloat
             elif self.orientation in ["NW", "WN"]:
                 if i == 0:
                     self.curr_y = self.y_start
@@ -109,16 +142,31 @@ class VLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation in ["SW", "WS"]:
                 if i == 0:
                     self.curr_y = self.y_size - curr_h + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]
                 self.curr_x = self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation in ["SE", "ES"]:
                 if i == 0:
                     self.curr_y = self.y_size - curr_h + self.y_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_y -= curr_h2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_y -= self.keep_padd_info[j]
+
                 self.curr_x = self.x_size - curr_w + self.x_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
@@ -153,17 +201,24 @@ class HLayout(Layout):
             widget.draw(self.screen, mouse_pos, mouse_button, keys, delta_time)
 
     def put(self, widget, ypadd):
-
         for i, widget in enumerate(self.widgets):
             curr_w, curr_h = widget.get_size()
 
+            # bloated
             if self.orientation == "C":
                 if i == 0:
                     self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]/2
                 self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no need to bloat
             elif self.orientation == "W":
                 if i == 0:
                     self.curr_x = self.x_start
@@ -171,27 +226,49 @@ class HLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "E":
                 if i == 0:
                     self.curr_x = self.x_size - curr_w + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]
                 self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "N":
                 if i == 0:
                     self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]/2
                 self.curr_y = self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation == "S":
                 if i == 0:
                     self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2/2 + self.keep_padd_info[j]/2
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]/2
                 self.curr_y = self.y_size - curr_h + self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no need to bloat
             elif self.orientation in ["SW", "WS"]:
                 if i == 0:
                     self.curr_x = self.x_start
@@ -199,6 +276,7 @@ class HLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # no nedd to bloat
             elif self.orientation in ["NW", "WN"]:
                 if i == 0:
                     self.curr_x = self.x_start
@@ -206,9 +284,16 @@ class HLayout(Layout):
                 widget.set_pos(self.curr_x,
                                self.curr_y)
 
+            # bloated
             elif self.orientation in ["EN", "NE"]:
                 if i == 0:
                     self.curr_x = self.x_size - curr_w + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]
                 self.curr_y = self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)
@@ -216,6 +301,12 @@ class HLayout(Layout):
             elif self.orientation in ["SE", "ES"]:
                 if i == 0:
                     self.curr_x = self.x_size - curr_w + self.x_start
+                    for j, curr_widget in enumerate(self.widgets):
+                        curr_w2, curr_h2 = curr_widget.get_size()
+                        if j != 0:
+                            self.curr_x -= curr_w2 + self.keep_padd_info[j]
+                        else:
+                            self.curr_x -= self.keep_padd_info[j]
                 self.curr_y = self.y_size - curr_h + self.y_start
                 widget.set_pos(self.curr_x,
                                self.curr_y)

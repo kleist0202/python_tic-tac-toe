@@ -82,7 +82,7 @@ class TicTacToe:
 
         # info frames
         self.win_screen = TextFrame(
-            y=self.y_size/2-50/2, w=self.x_size, anchor="C", fontsize=20, h=50, gradient=True)
+            y=self.y_size/2-50/2, w=self.x_size, anchor="N", fontsize=20, h=50, gradient=True)
 
         self.info__player1 = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=True,
                                        text="Player 1", x=0, y=0, w=100, h=20)
@@ -117,9 +117,10 @@ class TicTacToe:
 
         # multiplayer : host game, join to game, return
 
-        self.multi_menu_layout_label = HLayout(screen, "C", -123, -60)
-        self.multi_menu_layout_entry = HLayout(screen, "C", -75, -25)
-        self.multi_menu_layout_button = HLayout(screen, "C", -85, 35)
+        self.multi_menu_layout_label = HLayout(screen, "C", 2, -75)
+
+        self.multi_menu_layout_entry = HLayout(screen, "C", 0, -40)
+        self.multi_menu_layout_button = HLayout(screen, "C", 0, 20)
 
         self.address_label = TextFrame(w=100, h=20, anchor="W",
                                        fill=Color.Gray, fontsize=14, bold=False, text="Address:")
@@ -127,8 +128,9 @@ class TicTacToe:
         self.port_label = TextFrame(w=100, h=20, anchor="W",
                                     fill=Color.Gray, fontsize=14, bold=False, text="Port:")
 
-        self.address_entry = EntryWidget(w=200, h=50)
-        self.port_entry = EntryWidget(w=150, h=50)
+        self.address_entry = EntryWidget(
+            w=200, h=50, bordercolor=Color.DarkGray)
+        self.port_entry = EntryWidget(w=100, h=50, bordercolor=Color.DarkGray)
 
         # default entry values
         self.address_entry.set_entry_value("localhost")
@@ -139,11 +141,11 @@ class TicTacToe:
         self.connect_button = Button(
             w=175, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
 
-        self.multi_menu_layout_label.add_widget(self.address_label, 120)
+        self.multi_menu_layout_label.add_widget(self.address_label, 150)
         self.multi_menu_layout_label.add_widget(self.port_label)
-        self.multi_menu_layout_entry.add_widget(self.address_entry, 20)
+        self.multi_menu_layout_entry.add_widget(self.address_entry, 50)
         self.multi_menu_layout_entry.add_widget(self.port_entry)
-        self.multi_menu_layout_button.add_widget(self.host_button, 18)
+        self.multi_menu_layout_button.add_widget(self.host_button)
         self.multi_menu_layout_button.add_widget(self.connect_button)
 
         self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
