@@ -46,9 +46,6 @@ class Main:
 
         # game
 
-        # self.game.calc_grid()
-        # self.game.init(self.screen)
-        # self.game.window_size_changed()
         self.current_count = self.count_fields(self.game.g)
         self.current_mng = self.game.mng_pressed
 
@@ -141,7 +138,10 @@ class Main:
 
             self.screen.fill(self.screen_color)
 
-            self.game.draw_grid(player, self.screen, mouse_pos, mouse_button)
+            self.game.draw_grid(player, self.screen, mouse_pos,
+                                mouse_button, keys, self.delta_time)
+            self.game.window_resize_callback(
+                self.screen.get_size(), self.game.calc_grid)
 
             # fps management
             self.fps.fps()
@@ -156,7 +156,7 @@ class Main:
             self.last_frame_time = current_frame_time
 
             # self.clock.tick(60)
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     async def recive(self, websocket):
         print('starting rcv loop...')

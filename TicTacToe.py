@@ -36,23 +36,14 @@ class TicTacToe:
         self.x_size, self.y_size = screen.get_size()
         self.calc_grid()
         self.init(screen)
-        # self.window_size_changed()
 
-    def create_game(self, screen, mouse_pos, mouse_button, keys, is_running, delta_time):
-        self.window_resize_callback(
-            screen.get_size(), self.window_size_changed)
-        self.is_running = is_running
-
-        if self.choice == "menu":
-            self.draw_menu(
-                screen, mouse_pos, mouse_button)
-
-        elif self.choice == "multiplayer":
-            self.draw_multiplayer_menu(
-                screen, mouse_pos, mouse_button, keys, delta_time)
-        else:
-            self.draw_grid(
-                screen)
+    def window_resize_callback(self, screen_size, func):
+        if self.x_size != screen_size[0]:
+            self.x_size = screen_size[0]
+            func()
+        elif self.y_size != screen_size[1]:
+            self.y_size = screen_size[1]
+            func()
 
     def calc_grid(self):
         self.y_offset = self.offset
@@ -81,30 +72,50 @@ class TicTacToe:
                                                        j*self.square_size, self.square_size, self.square_size))
 
         # info frames
+        self.info_left_layout = VLayout(screen, "NW")
+        self.info_right_layout = VLayout(screen, "NE")
+
         self.win_screen = TextFrame(
-            y=self.y_size/2-50/2, w=self.x_size, anchor="N", fontsize=20, h=50, gradient=True)
+            y=self.y_size/2-50/2, w=self.x_size, anchor="C", fontsize=20, h=50, gradient=True)
 
-        self.info__player1 = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=True,
-                                       text="Player 1", x=0, y=0, w=100, h=20)
-        self.info__player2 = TextFrame(fill=Color.Gray, fontcolor=Color.Red, fontsize=14, bold=True,
-                                       text="Player 2", x=self.x_size-100, y=0, w=100, h=20)
+        self.win_screen_layout = HLayout(screen, "C")
+        self.win_screen_layout.add_widget(self.win_screen)
 
-        self.info__player1_points = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=False,
-                                              text="0", x=0, y=20, w=100, h=20)
-        self.info__player2_points = TextFrame(fill=Color.Gray, fontcolor=Color.Red, fontsize=14, bold=False,
-                                              text="0", x=self.x_size-100, y=20, w=100, h=20)
+        self.info_player1 = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=True,
+                                      text="Player 1", w=100, h=20)
+        self.info_player2 = TextFrame(fill=Color.Gray, fontcolor=Color.Red, fontsize=14, bold=True,
+                                      text="Player 2", w=100, h=20)
+
+        self.info_player1_points = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=False,
+                                             text="0", x=0, y=20, w=100, h=20)
+        self.info_player2_points = TextFrame(fill=Color.Gray, fontcolor=Color.Red, fontsize=14, bold=False,
+                                             text="0", x=self.x_size-100, y=20, w=100, h=20)
+
+        # layouts
+        self.info_left_layout.add_widget(self.info_player1)
+        self.info_left_layout.add_widget(self.info_player1_points)
+        self.info_right_layout.add_widget(self.info_player2)
+        self.info_right_layout.add_widget(self.info_player2_points)
+
         # new game button
         self.new_game_button = Button(
-            x=10, y=self.y_size-60, w=60, h=20, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=self.make_new_game)
+            w=60, h=20, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=self.make_new_game)
 
         # return to menu button
-        self.return_to_menu_button = Button(
-            x=self.x_size-110, y=self.y_size, w=100, h=20, text="Return to menu", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray)
+        # self.return_to_menu_button = Button(
+        #    x=self.x_size-110, y=self.y_size, w=100, h=20, text="Return to menu", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray)
+
+        # show whose turn is it
+        self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
+                                    text="---", w=100, h=20)
+
+        self.new_game_layout = HLayout(screen, "SW", 10, -10)
+        self.new_game_layout.add_widget(self.new_game_button)
+        self.whose_turn_layout = HLayout(screen, "N", 0, 20)
+        self.whose_turn_layout.add_widget(self.whose_turn)
 
         # multiplayer : host game, join to game, return
-
         self.multi_menu_layout_label = HLayout(screen, "C", 2, -75)
-
         self.multi_menu_layout_entry = HLayout(screen, "C", 0, -40)
         self.multi_menu_layout_button = HLayout(screen, "C", 0, 20)
 
@@ -127,6 +138,7 @@ class TicTacToe:
         self.connect_button = Button(
             w=175, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
 
+        # layouts
         self.multi_menu_layout_label.add_widget(self.address_label, 150)
         self.multi_menu_layout_label.add_widget(self.port_label)
         self.multi_menu_layout_entry.add_widget(self.address_entry, 50)
@@ -134,10 +146,7 @@ class TicTacToe:
         self.multi_menu_layout_button.add_widget(self.host_button)
         self.multi_menu_layout_button.add_widget(self.connect_button)
 
-        self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
-                                    text="---", x=self.x_size/2 - 50, y=20, w=100, h=20)
-
-    def draw_grid(self, player, screen, mouse_pos, mouse_button):
+    def draw_grid(self, player, screen, mouse_pos, mouse_button, keys, delta_time):
         # FIXME: GRID DRAWING IS FINE ONLY FOR TIC-TAC-TOE 3x3
 
         # horizontal lines
@@ -198,14 +207,15 @@ class TicTacToe:
         #    screen, mouse_pos, mouse_button, self.return_to_menu)
 
         # draw players info
-        self.info__player1.draw(screen, mouse_pos)
-        self.info__player2.draw(screen, mouse_pos)
-        self.info__player1_points.draw(screen, mouse_pos)
-        self.info__player2_points.draw(screen, mouse_pos)
-        self.info__player1_points.set_text(str(self.player1_points))
-        self.info__player2_points.set_text(str(self.player2_points))
+        self.info_left_layout.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
+        self.info_right_layout.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
+        self.info_player1_points.set_text(str(self.player1_points))
+        self.info_player2_points.set_text(str(self.player2_points))
 
-        self.whose_turn.draw(screen, mouse_pos)
+        self.whose_turn_layout.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
         if self.player == "player_1":
             self.whose_turn.set_text("<---")
             self.whose_turn.set_color(Color.Blue)
@@ -216,27 +226,32 @@ class TicTacToe:
             raise Exception
 
         # check if game ends
-        self.check_result(screen, mouse_pos, mouse_button)
+        self.check_result(screen, mouse_pos, mouse_button, keys, delta_time)
 
-    def check_result(self, screen, mouse_pos, mouse_button):
+    def check_result(self, screen, mouse_pos, mouse_button, keys, delta_time):
         if self.check_vertical(self.g, "X") or self.check_horizontal(self.g, "X") or self.check_diagonally(self.g, "X"):
             if self.game_running:
                 self.player1_points += 1
                 self.win_screen.set_text("Player 1 has won!")
                 self.win_screen.set_color(Color.Blue)
             self.game_running = False
-            self.win_screen.draw(screen, mouse_pos)
-            self.new_game_button.draw(
-                screen, mouse_pos, mouse_button)
+            self.win_screen_layout.draw(screen.get_size(),
+                                        mouse_pos, mouse_button, keys, delta_time)
+            self.new_game_layout.draw(screen.get_size(),
+                                      mouse_pos, mouse_button, keys, delta_time)
+            self.win_screen.set_size(w=self.x_size, h=50)
+            print(self.x_size)
         elif self.check_vertical(self.g, "O") or self.check_horizontal(self.g, "O") or self.check_diagonally(self.g, "O"):
             if self.game_running:
                 self.player2_points += 1
                 self.win_screen.set_text("Player 2 has won!")
                 self.win_screen.set_color(Color.Red)
             self.game_running = False
-            self.win_screen.draw(screen, mouse_pos)
-            self.new_game_button.draw(
-                screen, mouse_pos, mouse_button)
+            self.win_screen_layout.draw(screen.get_size(),
+                                        mouse_pos, mouse_button, keys, delta_time)
+            self.new_game_layout.draw(screen.get_size(),
+                                      mouse_pos, mouse_button, keys, delta_time)
+            self.win_screen.set_size(w=self.x_size, h=50)
         elif self.draw_check():
             if self.game_running:
                 self.win_screen.set_text("Draw")
@@ -277,12 +292,6 @@ class TicTacToe:
                     return False
         return True
 
-    def draw_menu(self, screen, mouse_pos, mouse_button):
-        self.play_button.draw(screen, mouse_pos, mouse_button)
-        self.multiplayer_button.draw(
-            screen, mouse_pos, mouse_button, self.multiplayer)
-        self.quit_button.draw(screen, mouse_pos, mouse_button)
-
     def draw_multiplayer_menu(self, screen, mouse_pos, mouse_button, keys, delta_time):
         self.multi_menu_layout_label.draw(
             screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
@@ -301,12 +310,6 @@ class TicTacToe:
                 self.g[i][j] = ""
                 self.clickables[i*3+j].set_mark("")
 
-    def play(self):
-        self.choice = "game"
-
-    def multiplayer(self):
-        self.choice = "multiplayer"
-
     def return_to_menu(self):
         self.choice = "menu"
         self.make_new_game()
@@ -320,11 +323,6 @@ class TicTacToe:
     def connect(self):
         self.running = False
         self.multiplayer_choice = "connect"
-
-    def back(self):
-        self.multiplayer_choice = "menu"
-        self.address_entry.clear_entry_value()
-        self.port_entry.clear_entry_value()
 
     def quit(self):
         self.is_running.clear()
