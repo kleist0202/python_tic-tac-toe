@@ -101,20 +101,6 @@ class TicTacToe:
         self.return_to_menu_button = Button(
             x=self.x_size-110, y=self.y_size, w=100, h=20, text="Return to menu", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray)
 
-        # ----------- MENU ------------#
-
-        # play button
-        self.play_button = Button(
-            x=self.x_size/2-200/2, y=self.y_size/2-120, w=200, h=60, text="Play", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray)
-
-        # multiplayer button
-        self.multiplayer_button = Button(
-            x=self.x_size/2-200/2, y=self.y_size, w=200, h=60, text="Multiplayer", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray)
-
-        # quit
-        self.quit_button = Button(
-            x=self.x_size/2-200/2, y=self.y_size/2+60/2, w=200, h=60, text="Quit", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray)
-
         # multiplayer : host game, join to game, return
 
         self.multi_menu_layout_label = HLayout(screen, "C", 2, -75)
@@ -304,18 +290,6 @@ class TicTacToe:
             screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
         self.multi_menu_layout_button.draw(
             screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
-        pass
-        #self.address_label.draw(screen, mouse_pos)
-        #self.port_label.draw(screen, mouse_pos)
-        # self.address_entry.draw(
-        #    screen, mouse_pos, mouse_button, keys, delta_time)
-        # self.port_entry.draw(
-        #    screen, mouse_pos, mouse_button, keys, delta_time)
-
-        # self.host_button.draw(screen, mouse_pos,
-        #                      mouse_button)
-        # self.connect_button.draw(
-        #    screen, mouse_pos, mouse_button)
 
     # ---------------- slots ---------------- #
 
