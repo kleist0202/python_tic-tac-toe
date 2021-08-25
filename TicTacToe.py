@@ -2,7 +2,7 @@ import pygame
 
 from gui import Color, rgb
 from gui import Frame, TextFrame, EntryWidget, Button
-from gui import GridLayout
+from gui import GridLayout, VLayout, HLayout
 
 import asyncio
 import websockets
@@ -117,16 +117,16 @@ class TicTacToe:
 
         # multiplayer : host game, join to game, return
 
-        self.multiplayer_menu_layout = GridLayout(screen, "C")
+        self.multi_menu_layout_label = HLayout(screen, "C", -123, -60)
+        self.multi_menu_layout_entry = HLayout(screen, "C", -75, -25)
+        self.multi_menu_layout_button = HLayout(screen, "C", -85, 35)
 
-        self.address_label = TextFrame(w=100, h=20,
-                                       fill=Color.Red, fontsize=14, bold=False, text="Address:")
+        self.address_label = TextFrame(w=100, h=20, anchor="W",
+                                       fill=Color.Gray, fontsize=14, bold=False, text="Address:")
 
-        self.port_label = TextFrame(w=100, h=20,
-                                    fill=Color.Red, fontsize=14, bold=False, text="Port:")
+        self.port_label = TextFrame(w=100, h=20, anchor="W",
+                                    fill=Color.Gray, fontsize=14, bold=False, text="Port:")
 
-        self.misja = TextFrame(w=200, h=20,
-                               fill=Color.Blue, fontsize=14, bold=False, text="misja:")
         self.address_entry = EntryWidget(w=200, h=50)
         self.port_entry = EntryWidget(w=150, h=50)
 
@@ -135,16 +135,16 @@ class TicTacToe:
         self.port_entry.set_entry_value("8765")
 
         self.host_button = Button(
-            x=self.x_size/2-160, y=self.y_size/2-50, w=150, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray, func=self.host)
+            w=175, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray, func=self.host)
         self.connect_button = Button(
-            x=self.x_size/2 + 10, y=self.y_size/2-50, w=150, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
+            w=175, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
 
-        self.multiplayer_menu_layout.add_widget(self.address_label, 0, 0)
-        self.multiplayer_menu_layout.add_widget(self.port_label, 0, 1)
-        self.multiplayer_menu_layout.add_widget(self.misja, 1, 0)
-        self.multiplayer_menu_layout.add_widget(self.address_entry, 0, 2)
-
-        self.multiplayer_menu_layout.add_widget(self.port_entry, 0, 3)
+        self.multi_menu_layout_label.add_widget(self.address_label, 120)
+        self.multi_menu_layout_label.add_widget(self.port_label)
+        self.multi_menu_layout_entry.add_widget(self.address_entry, 20)
+        self.multi_menu_layout_entry.add_widget(self.port_entry)
+        self.multi_menu_layout_button.add_widget(self.host_button, 18)
+        self.multi_menu_layout_button.add_widget(self.connect_button)
 
         self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
                                     text="---", x=self.x_size/2 - 50, y=20, w=100, h=20)
@@ -296,7 +296,11 @@ class TicTacToe:
         self.quit_button.draw(screen, mouse_pos, mouse_button)
 
     def draw_multiplayer_menu(self, screen, mouse_pos, mouse_button, keys, delta_time):
-        self.multiplayer_menu_layout.draw(
+        self.multi_menu_layout_label.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
+        self.multi_menu_layout_entry.draw(
+            screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
+        self.multi_menu_layout_button.draw(
             screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
         pass
         #self.address_label.draw(screen, mouse_pos)
