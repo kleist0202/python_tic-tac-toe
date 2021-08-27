@@ -26,9 +26,7 @@ class Main:
 
         self.screen = pygame.display.set_mode(self.screen_size, options)
         pygame.display.set_caption(caption)
-        self.running = [True]
         self.screen_color = (0, 0, 0)
-        self.set_screen_color(0, 100, 100)
 
         self.clock = pygame.time.Clock()
 
@@ -169,7 +167,7 @@ class Main:
             self.game.mng_pressed = False
 
             print("receive")
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     async def send(self, websocket):
         print('starting send loop...')
@@ -182,7 +180,7 @@ class Main:
                 self.current_count = self.count_fields(self.game.g)
                 self.current_mng = self.game.mng_pressed
                 self.game.mng_pressed = False
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     def count_fields(self, L):
         count = 0

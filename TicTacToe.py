@@ -87,9 +87,9 @@ class TicTacToe:
                                       text="Player 2", w=100, h=20)
 
         self.info_player1_points = TextFrame(fill=Color.Gray, fontcolor=Color.Blue, fontsize=14, bold=False,
-                                             text="0", x=0, y=20, w=100, h=20)
+                                             text="0", w=100, h=20)
         self.info_player2_points = TextFrame(fill=Color.Gray, fontcolor=Color.Red, fontsize=14, bold=False,
-                                             text="0", x=self.x_size-100, y=20, w=100, h=20)
+                                             text="0", w=100, h=20)
 
         # layouts
         self.info_left_layout.add_widget(self.info_player1)
@@ -103,7 +103,7 @@ class TicTacToe:
 
         # return to menu button
         # self.return_to_menu_button = Button(
-        #    x=self.x_size-110, y=self.y_size, w=100, h=20, text="Return to menu", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray)
+        #    w=100, h=20, text="Return to menu", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=self.return_to_menu)
 
         # show whose turn is it
         self.whose_turn = TextFrame(fill=Color.Gray, fontcolor=Color.Black, fontsize=14, bold=True,
@@ -113,6 +113,8 @@ class TicTacToe:
         self.new_game_layout.add_widget(self.new_game_button)
         self.whose_turn_layout = HLayout(screen, "N", 0, 20)
         self.whose_turn_layout.add_widget(self.whose_turn)
+        #self.return_to_menu_layout = HLayout(screen, "SE", -10, -10)
+        # self.return_to_menu_layout.add_widget(self.return_to_menu_button)
 
         # multiplayer : host game, join to game, return
         self.multi_menu_layout_label = HLayout(screen, "C", 2, -75)
@@ -203,8 +205,8 @@ class TicTacToe:
             self.player = "player_1"
 
         # return to menu button
-        # self.return_to_menu_button.draw(
-        #    screen, mouse_pos, mouse_button, self.return_to_menu)
+        # self.return_to_menu_layout.draw(
+        #    screen.get_size(), mouse_pos, mouse_button, keys, delta_time)
 
         # draw players info
         self.info_left_layout.draw(
@@ -311,7 +313,6 @@ class TicTacToe:
                 self.clickables[i*3+j].set_mark("")
 
     def return_to_menu(self):
-        self.choice = "menu"
         self.make_new_game()
         self.player1_points = 0
         self.player2_points = 0
