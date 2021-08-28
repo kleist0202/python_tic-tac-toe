@@ -54,6 +54,7 @@ class Frame(Widget):
             **hover (bool): draw when hovering over or not
             **hovercolor (tuple): color which appear when mouse is hovering over frame
             **gradient (bool): draw gradient or not
+            **border_thickness (int): size of border
         """
         super().__init__(**kwargs)
         self.fill_color = kwargs.get("fill", Color.White)
@@ -62,6 +63,7 @@ class Frame(Widget):
         self.is_hover = kwargs.get("hover", False)
         self.hover_color = kwargs.get("hovercolor", self.fill_color)
         self.is_gradient = kwargs.get("gradient", False)
+        self.border_thickness = kwargs.get("borderthickness", 2)
         self.surf_init()
 
     def recreate(self, **kwargs):
@@ -72,6 +74,8 @@ class Frame(Widget):
         self.is_hover = kwargs.get("hover", self.is_hover)
         self.hover_color = kwargs.get("hovercolor", self.hover_color)
         self.is_gradient = kwargs.get("gradient", self.is_gradient)
+        self.border_thickness = kwargs.get(
+            "borderthickness", self.border_thickness)
         self.surf_init()
 
     def surf_init(self):
@@ -86,11 +90,11 @@ class Frame(Widget):
 
     def draw(self, display, mouse_pos, mouse_button=0, keys=0, delta_time=0):
         if self.is_gradient:
-            Special_Functions.border_rect(display, self.grad_surface.get_surface(
-            ), self.border_color, self.x, self.y, self.w, self.h, self.is_border)
+            Special_Functions.border_rect(display, self.grad_surface.get_surface(),
+                                          self.border_color, self.x, self.y, self.w, self.h, self.is_border, self.border_thickness)
         else:
-            Special_Functions.border_rect(display, self.fill_surface.get_surface(
-            ), self.border_color, self.x, self.y, self.w, self.h, self.is_border)
+            Special_Functions.border_rect(display, self.fill_surface.get_surface(),
+                                          self.border_color, self.x, self.y, self.w, self.h, self.is_border, self.border_thickness)
         self.is_hovering(mouse_pos)
 
     def is_hovering(self, mouse_pos):
@@ -117,22 +121,25 @@ class Label(Widget):
             **w (int): width
             **h (int): height
             **text (str): text to display
-            **align (str): align text ("left", "center", "right")
+            **anchor (str): set relative text position
             **fontcolor (tuple): changes font color
+            **fontsize (int): set size of font
+            **bold (bool): set text bold or not
         """
         super().__init__(**kwargs)
 
         # new settings
+        self.text = kwargs.get("text", "")
         self.anchor = kwargs.get("anchor", "C")
+        self.font_color = kwargs.get("fontcolor", (0, 0, 0))
         self.font_size = kwargs.get("fontsize", 12)
         self.set_bold = kwargs.get("bold", False)
-        self.font_color = kwargs.get("fontcolor", (0, 0, 0))
-        self.text = kwargs.get("text", "")
 
         self.text_object = Static_Text(
             fontsize=self.font_size, bold=self.set_bold, text=self.text, fontcolor=self.font_color)
 
-        self.text_width = self.text_object.get_text_width()
+        self.text_padding = 4
+        # FIXME: There is no vertical padding
 
     def draw(self, display, mouse_pos=0, mouse_key=0, keys=0, delta_time=0):
         vertical_center = self.y + self.h / 2 - self.text_object.get_text_height() / 2
@@ -144,11 +151,11 @@ class Label(Widget):
             y_pos = vertical_center
         elif self.anchor == "W":
             # left
-            x_pos = self.x
+            x_pos = self.x + self.text_padding
             y_pos = vertical_center
         elif self.anchor == "E":
             # right
-            x_pos = self.x + self.w
+            x_pos = self.x + self.w - self.text_object.get_text_width() - self.text_padding
             y_pos = vertical_center
         elif self.anchor == "N":
             # up
@@ -158,27 +165,33 @@ class Label(Widget):
             # bottom
             x_pos = horizontal_center
             y_pos = self.y + self.h - self.text.get_text_height()
-        elif self.anchor == "NW" or self.anchor == "WN":
+        elif self.anchor in ["NW", "WN"]:
             # up left
-            x_pos = self.x
+            x_pos = self.x + self.text_padding
             y_pos = self.y
-        elif self.anchor == "SW" or self.anchor == "WS":
+        elif self.anchor in ["SW", "WS"]:
             # down left
-            x_pos = self.x
+            x_pos = self.x + self.text_padding
             y_pos = self.y + self.h - self.text_object.get_text_height()
-        elif self.anchor == "NE" or self.anchor == "EN":
+        elif self.anchor in ["NE", "EN"]:
             # up right
-            x_pos = self.x + self.w - self.text_object.get_text_width()
+            x_pos = self.x + self.w - self.text_object.get_text_width() - self.text_padding
             y_pos = self.y
-        elif self.anchor == "SE" or self.anchor == "ES":
+        elif self.anchor in ["SE", "ES"]:
             # down right
-            x_pos = self.x + self.w - self.text_object.get_text_width()
+            x_pos = self.x + self.w - self.text_object.get_text_width() - self.text_padding
             y_pos = self.y + self.h - self.text_object.get_text_height()
         else:
             x_pos = horizontal_center
             y_pos = vertical_center
 
         display.blit(self.text_object.get_surface(), (x_pos, y_pos))
+
+    def set_padding(self, padd):
+        self.text_padding = padd
+
+    def get_padding(self):
+        return self.text_padding
 
     def set_text(self, text):
         self.text = text
@@ -218,6 +231,8 @@ class TextFrame(Frame, Label):
         if self.w < self.text_object.get_text_width():
             self.w = self.text_object.get_text_width()
             Frame.recreate(self, w=self.w, h=self.h)
+        Label.set_padding(self, Label.get_padding(self)
+                          + self.border_thickness/2)
 
     def draw(self, display, mouse_pos, mouse_key=0, keys=0, delta_time=0):
         Frame.draw(self, display, mouse_pos)
@@ -413,9 +428,6 @@ class EntryWidget(AbstractEntry, AbstractButton, Frame):
         Frame.recreate(self, **kwargs)
         self.dyn_text.recreate(**kwargs)
 
-    # def set_pos(self, x, y):
-    #    self.recreate(x=x, y=y)
-
 
 # --------------------------------------------------------------------- #
 
@@ -426,10 +438,9 @@ class Special_Functions:
     def __init__(self): pass
 
     @staticmethod
-    def border_rect(display, color_surface, frame_color, x, y, w, h, draw_borders):
+    def border_rect(display, color_surface, frame_color, x, y, w, h, draw_borders, border_thickness):
         """Function which allows you draw rectangle with borders"""
         display.blit(color_surface, (x, y))
-        border_thickness = 2
         if draw_borders:
             pygame.draw.line(display, frame_color, (x, y),
                              (x + w, y), border_thickness)
