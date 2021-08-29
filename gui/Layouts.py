@@ -349,34 +349,42 @@ class GridLayout(Layout):
 
     def put(self, xpadd, ypadd):
         save_start_x = 0
+        save_start_y = 0
+
         for key, widget_l in self.widgets.items():
             for i, widget in enumerate(widget_l):
                 curr_w, curr_h = widget.get_size()
-                if self.orientation == "C":
-                    if key == 0 and i == 0:
-                        self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
-                        for key2, widget_l2 in self.widgets.items():
-                            self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
-                            for j, curr_widget in enumerate(widget_l2):
-                                # FIXME: you need to find the longest row
-                                curr_w2, curr_h2 = curr_widget.get_size()
-                                if j != 0:
-                                    print(curr_w2)
-                                    self.curr_x -= curr_w2/2 - \
-                                        self.keep_padd_info[key2][j][0]/2
-                                else:
-                                    self.curr_x -= self.keep_padd_info[key2][j][0]/2
-                            if key2 != 0:
-                                self.curr_y -= curr_h2/2 - \
-                                    self.keep_padd_info[key2][j][1]/2
+                if i != 0:
+                    curr_w += self.keep_padd_info[key][i][0]
+                    curr_h += self.keep_padd_info[key][i][1]
+                if key == 0 and i == 0:
+                    self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
+                    self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
+                    save_start_x = self.curr_x
+                elif i == 0:
+                    self.curr_x = save_start_x
+                else:
+                    self.curr_x -= curr_w/2
 
-                        save_start_x = self.curr_x
-                    elif i == 0:
-                        self.curr_x = save_start_x
+            if key == 0:
+                self.curr_y -= curr_h/2
+                widget_l[0].set_pos(self.curr_x, self.curr_y)
+            else:
+                self.curr_y += curr_h
+                widget_l[0].set_pos(self.curr_x, self.curr_y)
 
-                    widget.set_pos(self.curr_x, self.curr_y)
-                    self.curr_x += curr_w + self.keep_padd_info[key][i][0]
-            self.curr_y += curr_h + self.keep_padd_info[key][i][1]
+        for key, widget_l in self.widgets.items():
+            for i, widget in enumerate(widget_l):
+                curr_w, curr_h = widget.get_size()
+                if i != 0:
+                    curr_w += self.keep_padd_info[key][i][0]
+                    curr_h += self.keep_padd_info[key][i][1]
+                if i == 0:
+                    save_start_x = widget.get_pos()[0]
+                    save_start_y = widget.get_pos()[1]
+                else:
+                    widget.set_pos(save_start_x + curr_w, save_start_y)
+                    save_start_x += curr_w
 
     def add_to_dict(self, dic, key, who):
         if (row := dic.get(key)) is None:
