@@ -259,9 +259,11 @@ class TicTacToe:
                 self.win_screen.set_text("Draw")
                 self.win_screen.set_color(Color.Black)
             self.game_running = False
-            self.win_screen.draw(screen, mouse_pos)
-            self.new_game_button.draw(
-                screen, mouse_pos, mouse_button)
+            self.win_screen_layout.draw(screen.get_size(),
+                                        mouse_pos, mouse_button, keys, delta_time)
+            self.new_game_layout.draw(screen.get_size(),
+                                      mouse_pos, mouse_button, keys, delta_time)
+            self.win_screen.set_size(w=self.x_size, h=50)
         else:
             pass
 
