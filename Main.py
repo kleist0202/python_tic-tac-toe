@@ -193,10 +193,10 @@ class Main:
     def events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = []
+                self.game.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = []
+                    self.game.running = False
 
     def set_screen_color(self, r, g, b):
         self.screen_color = (r, g, b)
