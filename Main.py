@@ -26,9 +26,7 @@ class Main:
 
         self.screen = pygame.display.set_mode(self.screen_size, options)
         pygame.display.set_caption(caption)
-        self.running = [True]
         self.screen_color = (0, 0, 0)
-        self.set_screen_color(0, 100, 100)
 
         self.clock = pygame.time.Clock()
 
@@ -42,13 +40,10 @@ class Main:
         # objects
 
         self.fps = Fps()
-        self.game = TicTacToe(self.screen_size)
+        self.game = TicTacToe(self.screen)
 
         # game
 
-        self.game.calc_grid()
-        self.game.init()
-        self.game.window_size_changed()
         self.current_count = self.count_fields(self.game.g)
         self.current_mng = self.game.mng_pressed
 
@@ -68,8 +63,6 @@ class Main:
             mouse_pos = pygame.mouse.get_pos()
             keys = pygame.key.get_pressed()
 
-            self.game.window_resize_callback(
-                self.screen.get_size(), self.game.window_size_changed)
             self.game.draw_multiplayer_menu(
                 self.screen, mouse_pos, mouse_button, keys, self.delta_time)
             # -------------------------------#
@@ -143,9 +136,10 @@ class Main:
 
             self.screen.fill(self.screen_color)
 
+            self.game.draw_grid(player, self.screen, mouse_pos,
+                                mouse_button, keys, self.delta_time)
             self.game.window_resize_callback(
-                self.screen.get_size(), self.game.window_size_changed)
-            self.game.draw_grid(player, self.screen, mouse_pos, mouse_button)
+                self.screen.get_size(), self.game.calc_grid)
 
             # fps management
             self.fps.fps()
@@ -160,7 +154,7 @@ class Main:
             self.last_frame_time = current_frame_time
 
             # self.clock.tick(60)
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     async def recive(self, websocket):
         print('starting rcv loop...')
@@ -173,7 +167,7 @@ class Main:
             self.game.mng_pressed = False
 
             print("receive")
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     async def send(self, websocket):
         print('starting send loop...')
@@ -186,7 +180,7 @@ class Main:
                 self.current_count = self.count_fields(self.game.g)
                 self.current_mng = self.game.mng_pressed
                 self.game.mng_pressed = False
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.01)
 
     def count_fields(self, L):
         count = 0
@@ -199,10 +193,10 @@ class Main:
     def events(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = []
+                self.game.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = []
+                    self.game.running = False
 
     def set_screen_color(self, r, g, b):
         self.screen_color = (r, g, b)

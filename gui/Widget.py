@@ -2,10 +2,10 @@ import pygame
 from operator import attrgetter
 from gui import Static_Text, Dynamic_Text
 from gui import Color
-from random import randint
+from abc import ABC, abstractmethod
 
 
-class Widget:
+class Widget(ABC):
     """ Base class of all GUI objects """
 
     def __init__(self, **kwargs):
@@ -20,6 +20,22 @@ class Widget:
         self.y = kwargs.get("y", self.y)
         self.w = kwargs.get("w", self.w)
         self.h = kwargs.get("h", self.h)
+
+    def set_pos(self, x, y):
+        self.recreate(x=x, y=y)
+
+    def set_size(self, w, h):
+        self.recreate(w=w, h=h)
+
+    def get_pos(self):
+        return (self.x, self.y)
+
+    def get_size(self):
+        return (self.w, self.h)
+
+    @abstractmethod
+    def draw(self):
+        pass
 
 
 class Frame(Widget):
@@ -68,7 +84,7 @@ class Frame(Widget):
         self.grad_surface = Gradient(begin_color, end_color, self.w, self.h)
         self.temp_grad_surface = self.grad_surface
 
-    def draw(self, display, mouse_pos):
+    def draw(self, display, mouse_pos, mouse_button=0, keys=0, delta_time=0):
         if self.is_gradient:
             Special_Functions.border_rect(display, self.grad_surface.get_surface(
             ), self.border_color, self.x, self.y, self.w, self.h, self.is_border)
@@ -88,15 +104,6 @@ class Frame(Widget):
         else:
             self.fill_surface = self.temp_fill_surface
             self.grad_surface = self.temp_grad_surface
-
-    def set_pos(self, x, y):
-        self.recreate(x=x, y=y)
-
-    def set_size(self, w, h):
-        self.recreate(w=w, h=h)
-
-    def get_pos(self):
-        return (self.x, self.y)
 
 
 class Label(Widget):
@@ -127,7 +134,7 @@ class Label(Widget):
 
         self.text_width = self.text_object.get_text_width()
 
-    def draw(self, display):
+    def draw(self, display, mouse_pos=0, mouse_key=0, keys=0, delta_time=0):
         vertical_center = self.y + self.h / 2 - self.text_object.get_text_height() / 2
         horizontal_center = self.x + self.w / 2 - self.text_object.get_text_width() / 2
 
@@ -158,15 +165,15 @@ class Label(Widget):
         elif self.anchor == "SW" or self.anchor == "WS":
             # down left
             x_pos = self.x
-            y_pos = self.y + self.h - self.text.get_text_height()
+            y_pos = self.y + self.h - self.text_object.get_text_height()
         elif self.anchor == "NE" or self.anchor == "EN":
             # up right
-            x_pos = self.x + self.w - self.text.get_text_width()
+            x_pos = self.x + self.w - self.text_object.get_text_width()
             y_pos = self.y
         elif self.anchor == "SE" or self.anchor == "ES":
             # down right
-            x_pos = self.x + self.w - self.text.get_text_width()
-            y_pos = self.y + self.h - self.text.get_text_height()
+            x_pos = self.x + self.w - self.text_object.get_text_width()
+            y_pos = self.y + self.h - self.text_object.get_text_height()
         else:
             x_pos = horizontal_center
             y_pos = vertical_center
@@ -212,7 +219,7 @@ class TextFrame(Frame, Label):
             self.w = self.text_object.get_text_width()
             Frame.recreate(self, w=self.w, h=self.h)
 
-    def draw(self, display, mouse_pos):
+    def draw(self, display, mouse_pos, mouse_key=0, keys=0, delta_time=0):
         Frame.draw(self, display, mouse_pos)
         Label.draw(self, display)
 
@@ -223,25 +230,23 @@ class AbstractButton(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.pressed = False
+        self.function = kwargs.get("func", None)
 
-    def is_clicked(self, mouse_pos, mouse_key, func=None):
+    def is_clicked(self, mouse_pos, mouse_key):
 
         # we are checking if mouse position covers button dimensions
         if mouse_pos[0] > self.x and mouse_pos[1] > self.y and mouse_pos[0] < self.x + self.w and mouse_pos[1] < self.y + self.h:
             if not mouse_key[0]:
                 if self.pressed:
-                    func()
+                    if self.function == None:
+                        pass
+                    else:
+                        self.function()
 
             # when mouse hover on the button, we can check if mouse button is pressed and trigger an event
             if mouse_key[0]:
-                # self.color = self.hover_color
                 if not self.pressed:
                     self.pressed = True
-                    if func == None:
-                        pass
-                    else:
-                        pass
-                        # func()
                 return True
 
         self.pressed = False
@@ -265,6 +270,7 @@ class Button(AbstractButton, TextFrame):
             **hovercolor (tuple): color which appear when mouse is hovering over button
             **pressedcolor (tuple): color which appear when button is pressed
             **gradient (bool): draw gradient or not
+            **func (function): function which will be executed when the button is pressed
         """
         super().__init__(**kwargs)
 
@@ -277,20 +283,11 @@ class Button(AbstractButton, TextFrame):
         self.is_gradient = kwargs.get("gradient", True)
         self.is_border = kwargs.get("border", True)
 
-    def draw(self, display, mouse_pos, mouse_key, func=None):
+    def draw(self, display, mouse_pos, mouse_key, keys=0, delta_time=0):
         TextFrame.draw(self, display, mouse_pos)
-        if(super().is_clicked(mouse_pos, mouse_key, func)):
+        if(super().is_clicked(mouse_pos, mouse_key)):
             self.fill_surface = self.color_surface_pressed
             self.grad_surface = self.color_surface_pressed
-
-    def recreate(self, **kwargs):
-        TextFrame.recreate(self, **kwargs)
-
-    def set_pos(self, x, y):
-        self.recreate(x=x, y=y)
-
-    def set_size(self, w, h):
-        self.recreate(w=w, h=h)
 
 
 class AbstractEntry(Widget):
@@ -387,8 +384,11 @@ class EntryWidget(AbstractEntry, AbstractButton, Frame):
         self.active_border_color = kwargs.get(
             "activebordercolor", Color.SkyBlue)
 
+        # entrywidget as 'abstractbutton', needs function: here, activate entry
+        self.function = self.activate
+
     def draw(self, display, mouse_pos, mouse_key, keys, delta_time):
-        AbstractButton.is_clicked(self, mouse_pos, mouse_key, self.activate)
+        AbstractButton.is_clicked(self, mouse_pos, mouse_key)
         Frame.draw(self, display, mouse_pos)
         if self.is_active:
             self.border_color = self.active_border_color
@@ -413,10 +413,11 @@ class EntryWidget(AbstractEntry, AbstractButton, Frame):
         Frame.recreate(self, **kwargs)
         self.dyn_text.recreate(**kwargs)
 
-    def set_pos(self, x, y):
-        self.recreate(x=x, y=y)
+    # def set_pos(self, x, y):
+    #    self.recreate(x=x, y=y)
 
-# ----------------------------------------------------------------------#
+
+# --------------------------------------------------------------------- #
 
 
 class Special_Functions:
@@ -428,14 +429,16 @@ class Special_Functions:
     def border_rect(display, color_surface, frame_color, x, y, w, h, draw_borders):
         """Function which allows you draw rectangle with borders"""
         display.blit(color_surface, (x, y))
+        border_thickness = 2
         if draw_borders:
-            for _ in range(4):
-                pygame.draw.line(display, frame_color, (x, y), (x + w, y), 1)
-                pygame.draw.line(display, frame_color,
-                                 (x, y + h), (x + w, y + h), 1)
-                pygame.draw.line(display, frame_color, (x, y), (x, y + h), 1)
-                pygame.draw.line(display, frame_color,
-                                 (x + w, y), (x + w, y + h), 1)
+            pygame.draw.line(display, frame_color, (x, y),
+                             (x + w, y), border_thickness)
+            pygame.draw.line(display, frame_color,
+                             (x, y + h), (x + w, y + h), border_thickness)
+            pygame.draw.line(display, frame_color, (x, y),
+                             (x, y + h), border_thickness)
+            pygame.draw.line(display, frame_color,
+                             (x + w, y), (x + w, y + h), border_thickness)
 
 
 class ColorSurface:
