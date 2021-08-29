@@ -136,9 +136,11 @@ class TicTacToe:
         self.port_entry.set_entry_value("8765")
 
         self.host_button = Button(
-            w=175, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False, fill=Color.DarkGray, func=self.host)
+            w=175, h=50, text="Host", bordercolor=Color.Black, fontsize=20, gradient=False,
+            fill=Color.DarkGray, func=self.host)
         self.connect_button = Button(
-            w=175, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False, fill=Color.DarkGray, func=self.connect)
+            w=175, h=50, text="Connect", bordercolor=Color.Black, fontsize=19, gradient=False,
+            fill=Color.DarkGray, func=self.connect)
 
         # layouts
         self.multi_menu_layout_label.add_widget(self.address_label, 150)
@@ -242,7 +244,6 @@ class TicTacToe:
             self.new_game_layout.draw(screen.get_size(),
                                       mouse_pos, mouse_button, keys, delta_time)
             self.win_screen.set_size(w=self.x_size, h=50)
-            print(self.x_size)
         elif self.check_vertical(self.g, "O") or self.check_horizontal(self.g, "O") or self.check_diagonally(self.g, "O"):
             if self.game_running:
                 self.player2_points += 1
