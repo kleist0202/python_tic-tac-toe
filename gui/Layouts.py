@@ -34,6 +34,8 @@ class Layout(ABC):
 
 
 class VLayout(Layout):
+    """ Layout that allows you to arrange the widgets one after another vertically"""
+
     def __init__(self, screen, orientation="NW", x_start=0, y_start=0):
         super().__init__(screen)
         self.orientation = orientation
@@ -179,6 +181,8 @@ class VLayout(Layout):
 
 
 class HLayout(Layout):
+    """ Layout that allows you to arrange the widgets one after another horizontally"""
+
     def __init__(self, screen, orientation="NW", x_start=0, y_start=0):
         super().__init__(screen)
         self.orientation = orientation
@@ -189,10 +193,10 @@ class HLayout(Layout):
         self.curr_x = 0
         self.curr_y = 0
 
-    def add_widget(self, widget, ypadd=0):
+    def add_widget(self, widget, xpadd=0):
         self.widgets.append(widget)
-        self.keep_padd_info.append(ypadd)
-        self.put(widget, ypadd)
+        self.keep_padd_info.append(xpadd)
+        self.put(widget, xpadd)
 
     @Layout.window_resize_callback
     def draw(self, screen_size, mouse_pos, mouse_button, keys, delta_time):
@@ -200,7 +204,7 @@ class HLayout(Layout):
         for widget in self.widgets:
             widget.draw(self.screen, mouse_pos, mouse_button, keys, delta_time)
 
-    def put(self, widget, ypadd):
+    def put(self, widget, xpadd):
         for i, widget in enumerate(self.widgets):
             curr_w, curr_h = widget.get_size()
 
@@ -319,59 +323,65 @@ class HLayout(Layout):
 
 
 class GridLayout(Layout):
-    def __init__(self, screen, orientation="NW"):
+    def __init__(self, screen, orientation="NW", x_start=0, y_start=0):
         super().__init__(screen)
         self.orientation = orientation
+        self.x_start = x_start
+        self.y_start = y_start
+        self.widgets = []
         self.x_size, self.y_size = screen.get_size()
-        self.keep_pos_info = []
+        self.keep_padd_info = []
+        self.curr_x = 0
+        self.curr_y = 0
+        self.curr_r = 0
+        self.curr_c = 0
 
     def add_widget(self, widget, row, col, xpadd=0, ypadd=0):
-        self.widgets.append(widget)
-        self.keep_pos_info.append((row, col, xpadd, ypadd))
+        if row == 0 and col == 0:
+            self.widgets.append(["0", widget])
+        else:
+            self.widgets.append([self.v_or_h(row, col), widget])
+        self.keep_padd_info.append((xpadd, ypadd))
         self.put(widget, row, col, xpadd, ypadd)
 
-    @Layout.window_resize_callback
+    @ Layout.window_resize_callback
     def draw(self, screen_size, mouse_pos, mouse_button, keys, delta_time):
 
         for widget in self.widgets:
-            widget.draw(self.screen, mouse_pos, mouse_button, keys, delta_time)
+            widget[1].draw(self.screen, mouse_pos,
+                           mouse_button, keys, delta_time)
 
     def put(self, widget, row, col, xpadd, ypadd):
-        if len(self.widgets) == 1:
-            current_index = 0
-        else:
-            current_index = len(self.widgets)-2
-        w, h = self.widgets[current_index].get_size()
+        for widget_l in self.widgets:
+            curr_w, curr_h = widget_l[1].get_size()
 
-        if self.orientation == "C":
-            widget.set_pos(self.x_size/2 - (w/2) + row*w+xpadd,
-                           self.y_size/2 - (h/2) + col*h+ypadd)
-        elif self.orientation == "E":
-            widget.set_pos(self.x_size - w + row*w+xpadd,
-                           self.y_size/2 - (h/2) + col*h+ypadd)
-        elif self.orientation == "W":
-            widget.set_pos(0 + row*w+xpadd,
-                           self.y_size/2 - (h/2) + col*h+ypadd)
-        elif self.orientation == "N":
-            widget.set_pos(self.x_size/2 - (w/2) + row*w+xpadd,
-                           0 + col*h+ypadd)
-        elif self.orientation == "S":
-            widget.set_pos(self.x_size/2 - (w/2) + row*w+xpadd,
-                           self.y_size - h + col*h+ypadd)
-        elif self.orientation in ["NE", "EN"]:
-            widget.set_pos(self.x_size - w + row*w+xpadd,
-                           0 + col*h+ypadd)
-        elif self.orientation in ["SE", "ES"]:
-            widget.set_pos(self.x_size - w + row*w+xpadd,
-                           self.y_size - h + col*h+ypadd)
-        elif self.orientation in ["WS", "SW"]:
-            widget.set_pos(0 + row*w+xpadd,
-                           self.y_size - h + col*h+ypadd)
+            # bloated
+            if self.orientation == "C":
+                if widget_l[0] == "0":
+                    self.curr_x = self.x_size/2 - curr_w/2 + self.x_start
+                    self.curr_y = self.y_size/2 - curr_h/2 + self.y_start
+
+                if widget_l[0] == "v":
+                    self.curr_y += curr_h  # + self.keep_padd_info[i]
+                elif widget_l[0] == "h":
+                    self.curr_x += curr_w  # + self.keep_padd_info[i]
+                widget.set_pos(self.curr_x, self.curr_y)
+
+    def v_or_h(self, r, c):
+        rr = r - self.curr_r
+        cc = c - self.curr_c
+        print(rr, cc)
+
+        self.curr_r = r
+        self.curr_c = c
+        if rr >= 1 and cc <= 0:
+            return "h"
+        elif cc >= 1 and rr <= 0:
+            return "v"
         else:
-            widget.set_pos(row*w+xpadd, col*h+ypadd)
+            raise ValueError("YOU CAN'T PLACE IT LIKE THAT.")
 
     def resize(self):
-        for keep_index, widget in enumerate(self.widgets):
-            self.put(widget, *self.keep_pos_info[keep_index])
+        pass
 
 # --------------------------------------------------------------------- #
