@@ -1,7 +1,7 @@
 import pygame
 from operator import attrgetter
-from gui import Static_Text, Dynamic_Text
-from gui import Color
+from python_tic_tac_toe.gui import Static_Text, Dynamic_Text
+from python_tic_tac_toe.gui import Color
 from abc import ABC, abstractmethod
 
 

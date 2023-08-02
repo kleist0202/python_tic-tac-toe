@@ -1,8 +1,8 @@
 import pygame
 import sys
-from gui import Color
-from Fps import Fps
-from TicTacToe import TicTacToe
+from python_tic_tac_toe.gui import Color
+from python_tic_tac_toe.Fps import Fps
+from python_tic_tac_toe.TicTacToe import TicTacToe
 
 import asyncio
 import websockets
@@ -207,7 +207,7 @@ class Main:
         sys.exit()
 
 
-if __name__ == "__main__":
+def main():
     pygame.init()
     info = pygame.display.Info()
     SCREENSIZE = (info.current_w, info.current_h)
@@ -215,3 +215,7 @@ if __name__ == "__main__":
     CAPTION = "TIC TAC TOE"
     Main(size=SCREENSIZE, caption=CAPTION, resizable=True,
          fullscreen=False).main_loop()
+
+
+if __name__ == "__main__":
+    main()

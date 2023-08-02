@@ -1,8 +1,8 @@
 import pygame
 
-from gui import Color, rgb
-from gui import Frame, TextFrame, EntryWidget, Button
-from gui import GridLayout, VLayout, HLayout
+from python_tic_tac_toe.gui import Color, rgb
+from python_tic_tac_toe.gui import Frame, TextFrame, EntryWidget, Button
+from python_tic_tac_toe.gui import GridLayout, VLayout, HLayout
 
 import asyncio
 import websockets
