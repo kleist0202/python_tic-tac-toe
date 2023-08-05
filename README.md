@@ -2,12 +2,18 @@
 Tic-Tac-Toe game for two players game written in Python.
 It uses ```websockets``` module for communication.
 # Setup
-To run this project you need pygame and websockets:
-```
-pip install pygame
-pip install websockets
-```
-then
-```
-python Main.py
-```
+The best way would be to create virtual environment:  
+
+`python -m venv env`
+
+Then activate it:  
+
+`source env/bin/activate`
+
+Install it with pip, running below command in project directory:  
+
+`pip install -e .`
+
+Now to run it:
+
+`./env/bin/python_tic_tac_toe`
