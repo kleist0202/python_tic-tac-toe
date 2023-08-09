@@ -2,156 +2,323 @@ from python_tic_tac_toe.Colors import Color
 from python_tic_tac_toe.TicTacToe import Tic
 
 import asyncio
-import websockets
+import socket
 import pickle
 import nepygui
 import argparse
 import threading
 
 
-class SERVER:
-    def __init__(self):
-        self.stop_request = asyncio.Event()
-        self.should_stop = False  # Flag to indicate whether the server should stop
+class Player():
+    def __init__(self, points, user_tag):
+        self.points = points
+        self.user_tag = user_tag
 
-    async def main_server(self):
-        while not self.should_stop:
-            print('starting the server')
-            server = await asyncio.get_event_loop().create_server(EchoServerProtocol, '127.0.0.1', 8888)
+    def serialize(self):
+        return {
+            'points': self.points,
+            'user_tag': self.user_tag,
+        }
 
-            await self.stop_request.wait()
-            self.stop_request.clear()
-            print('stopping the server')
-            server.close()
-            await server.wait_closed()
-            print("Closed")
+    def __repr__(self) -> str:
+        return f"Player({self.points}, {self.user_tag})"
 
-    def stop_server(self):
-        self.should_stop = True
-        self.stop_request.set()
-
-
-class CLIENT:
-    def __init__(self, client_protocol):
-        self.client_protocol = client_protocol
-
-    def close_client(self):
-        self.client_protocol.close_connection()
+    @classmethod
+    def deserialize(cls, data):
+        points = data['points']
+        user_tag = data['user_tag']
+        player = cls(points, user_tag)
+        return player
 
 
-class EchoServerProtocol(asyncio.Protocol):
-    def __init__(self):
-        self.transport = None
-        self.running = True
+class Network:
+    def __init__(self, user_tag, server, port, w):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # self.server = socket.gethostbyname(socket.gethostname())
+        self.server = server
+        self.port = port
+        self.addr = (self.server, self.port)
+        self.plr = None
+        self.window = w
+        self.connect(user_tag)
 
-    def connection_made(self, transport):
-        peername = transport.get_extra_info('peername')
-        print('Connection from {}'.format(peername))
-        self.transport = transport
+    def getP(self):
+        return self.plr
 
-    def data_received(self, data):
-        message = data.decode()
-        print('\nData received from client: {!r}\n'.format(message))
+    def connect(self, user_tag):
+        try:
+            self.client.connect(self.addr)
+            self.client.send(pickle.dumps(user_tag))
+
+            player_data = self.client.recv(2048)
+            # print("Player data: ", player_data)
+            self.plr = pickle.loads(player_data)
+            # print("Player: ", self.plr)
+
+            if user_tag == "player1":
+                self.window.switch_menus("host")
+            else:
+                self.window.switch_menus("client")
+
+            return self.plr
+        except Exception as e:
+            self.window.switch_menus("default")
+            print("Error connecting to server", e)
+            return
+
+    def send(self, data):
+        try:
+            self.client.send(pickle.dumps(data.serialize()))
+            received_data = self.client.recv(2048)
+            print("RECEIVED")
+            print(pickle.loads(received_data))
+            if not received_data:
+                print("No data received from the server")
+                return []
+            return [
+                Player.deserialize(p_data) for p_data in pickle.loads(received_data)
+            ]
+        except Exception as e:
+            print(e)
+            self.client.close()
+            return []
+        except socket.error as e:
+            print(e)
+            self.client.close()
+            return []
+        except EOFError:
+            print("EOFError: Ran out of input")
+            return []
 
     def close(self):
-        print('Close the client socket')
-        self.transport.close()
-
-    def connection_lost(self, exc):
-        print('The client closed the connection')
-
-    def send_message(self, message):
-        self.transport.write(message.encode())
+        self.client.close()
+        self.window.switch_menus("default")
 
 
-class EchoClientProtocol(asyncio.Protocol):
-    def __init__(self, message, on_con_lost):
-        self.message = message
-        self.on_con_lost = on_con_lost
-        self.transport = None
+class ConnectionManager:
+    def __init__(self):
+        self.players = {}
+        self._next_connection_id = 0
 
-    def connection_made(self, transport):
-        self.transport = transport
-        self.transport.write(self.message.encode())
-        print('Data sent: {!r}'.format(self.message))
-
-    def data_received(self, data):
-        print('\nData received from server: {!r}\n'.format(data.decode()))
-
-    def connection_lost(self, exc):
-        print('The server closed the connection')
-        self.on_con_lost.set_result(True)
-
-    def close_connection(self):
-        if self.transport:
-            self.transport.close()
-
-
-async def client_runner():
-    loop = asyncio.get_running_loop()
-
-    on_con_lost = loop.create_future()
-    message = 'Client says hello!'
-
-    transport, protocol = await loop.create_connection(
-        lambda: EchoClientProtocol(message, on_con_lost),
-        '127.0.0.1', 8888)
-
-    return protocol  # Return the protocol, not the transport
-
-
-async def async_input(prompt):
-    loop = asyncio.get_event_loop()
-    user_input = await loop.run_in_executor(None, input, prompt)
-    return user_input
-
-
-async def user_input(client_instance):
-    client_protocol = None
-    client_protocol = await client_runner()
-    client_instance.client_protocol = client_protocol
-    while True:
-        print("DEATh")
-
-
-async def send_message(message, client_protocol):
-    if client_protocol and client_protocol.transport:
-        client_protocol.transport.write(message.encode())
-
-
-def server_runner(loop, sss):
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(sss.main_server())
-
-
-def start_server(btn, w, loop, server_instance: SERVER):
-    w.switch_menus("host")
-    server_instance.should_stop = False
-    server_instance.stop_request.clear()
-    # Start the server in a separate thread
-    server_thread = threading.Thread(target=server_runner, args=(loop, server_instance,))
-    server_thread.start()
-    # stop_server(loop, server_instance)
-    # Wait for the server thread to finish
-    # server_thread.join()
-
-
-def stop_server(w, sss):
-    w.switch_menus("default")
-    sss.should_stop = True  # Set the flag to indicate the server should stop
-    sss.stop_request.set()
-
-
-def start_client(btn, w, client_instance):
-    w.switch_menus("client")
-    asyncio.run(user_input(client_instance))
-
-
-def stop_client(client_instance: CLIENT):
-    client_instance.client_protocol.close_connection()
-    client_instance.client_protocol = None
-
+    def get_new_connection_id(self):
+        conn_id = self._next_connection_id
+        self._next_connection_id += 1
+        return conn_id
     
+    def get_all_players(self):
+        return self.players
+    
+    def add_player(self, conn_id, player):
+        self.players[conn_id] = player
+
+    def remove_player(self, player: Player):
+        current_player_name = player.user_tag
+        for key, val in self.players.items():
+            if current_player_name == val.user_tag:
+                self.players.pop(key)
+                break
+
+    def get_player(self, player_name):
+        player_gotten = None
+        player_key = ""
+        for key, val in self.players.items():
+            if player_name == val.user_tag:
+                player_gotten = val
+                player_key = key
+                break
+        return player_key, player_gotten
+
+    def get_all_players_except(self, curr_player):
+        return [player for id, player in self.players.items() if player.user_tag != curr_player.user_tag]
+
+
+class Server:
+    def __init__(self):
+        self.ip = ""
+        self.port = 0
+        self.plr_mgr = ConnectionManager()
+        self.is_running = False
+        self.client_do_close = False
+        self.stop_request = asyncio.Event()
+        self.start_request = asyncio.Event()
+        self.server_thread = None
+
+    def set_address_and_port(self, address, port):
+        self.ip = address
+        self.port = port
+
+    def new_player(self, user_tag):
+        player = Player(0, user_tag)
+        return player
+
+    async def wait_for_startup(self):
+        await self.start_request.wait()
+
+    async def handle_client(self, reader, writer):
+        if len(self.plr_mgr.players.keys()) > 1:
+            print("Only two players allowed!")
+            writer.close()
+            await writer.wait_closed()
+            return
+        user_tag = await reader.read(2048)
+        user_tag = pickle.loads(user_tag)
+
+        player = self.new_player(user_tag)
+        print("NEW PLAYER:", player)
+        # print("Player: ", player)
+        id = self.plr_mgr.get_new_connection_id()
+        self.plr_mgr.add_player(id, player)
+
+        # player_data = player.serialize()
+        # print("PLAYERDATA", player_data)
+        writer.write(pickle.dumps(player))
+        await writer.drain()
+
+        # Get the client's address
+        client_address = writer.get_extra_info('peername')
+        print(f"Connected to: {client_address}")
+
+        self.is_running = True
+        try:
+            while self.is_running:
+                data = await reader.read(2048)
+                # print("Data: ", data)
+                if not data:
+                    break
+
+                data = pickle.loads(data)
+                _, player = self.plr_mgr.get_player(data['user_tag'])
+                player.points = data['points']
+                # print("Player: ", player)
+                other_players = self.plr_mgr.get_all_players_except(player)
+                # print("Other players: ", other_players)
+                other_players = [p.serialize() for p in other_players]
+                # print("Sending other players data:", other_players)
+                writer.write(pickle.dumps(other_players))
+                # print("Received: ", data) 
+                await writer.drain()
+
+        except Exception as e:
+            print(f"Exception occurred: {e}")
+
+        writer.close()
+        await writer.wait_closed()
+
+        if player is not None and player.user_tag == "player1":
+            self.plr_mgr.players.clear()
+        else:
+            self.plr_mgr.remove_player(player)
+        # if not self.is_running:
+        if not self.plr_mgr.players:
+            self.stop_request.set()
+            self.start_request.clear()
+        # self.is_running = False
+
+    async def start_server(self):
+        self.start_request.clear()
+        try:
+            server = await asyncio.start_server(self.handle_client, self.ip, self.port)
+        except Exception as e:
+            print(e)
+            self.start_request.set()
+            await asyncio.sleep(1)
+            return
+
+        addr = server.sockets[0].getsockname()
+        print(f'Serving on {addr}')
+
+        # async with server:
+        #     await server.serve_forever()
+        self.start_request.set()
+        await self.stop_request.wait()
+        self.stop_request.clear()
+        server.close()
+        print("waiting for server to close...")
+        await server.wait_closed()
+        print("server stopped yay!")
+
+    def clean_up(self):
+        self.plr_mgr.players.clear()
+
+
+class GameClient:
+    counter = 0
+
+    def __init__(self, w):
+        self.names = ["player1", "player2"]
+        self.player_username = self.get_player_id()
+        self.net: Network = None
+        self.plr: Player = None
+        self.window = w
+
+    def connect_to_network(self, server, port):
+        self.net = Network(self.player_username, server, port, self.window)
+        self.plr = self.net.getP()
+
+    def get_player_id(self):
+        player_id = self.names[GameClient.counter % 2]
+        GameClient.counter += 1
+        return player_id
+
+    def update_players(self):
+        self.plr.points += 1
+        other_players = self.net.send(self.plr)
+        if other_players is None:
+            other_players = []
+        # self.plr.update(dt, other_players)
+        return [self.plr] + other_players
+
+    def change_results(self):
+        players = self.update_players()
+        print(players)
+
+
+def run_server(loop, server):
+    # asyncio.run(server.start_server)
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(server.start_server())
+
+
+def gui_action_connect(player2, entry_address, entry_port):
+    server_name = entry_address.get_entry_value()
+    port_val = entry_port.get_entry_value()
+    if port_val.isdigit():
+        port = int(port_val)
+    else:
+        return
+    player2.connect_to_network(server_name, port)
+    # w.switch_menus("client")
+
+
+def gui_action_disconnect(w, player2):
+    player2.net.close()
+
+
+def gui_action_start_server(loop, server, player1, entry_address, entry_port):
+    server_name = entry_address.get_entry_value()
+    port_val = entry_port.get_entry_value()
+    if port_val.isdigit():
+        port = int(port_val)
+    else:
+        return
+    server.set_address_and_port(server_name, port)
+    server.server_thread = threading.Thread(target=run_server, args=(loop, server,))
+    server.server_thread.start()
+
+    asyncio.run_coroutine_threadsafe(server.wait_for_startup(), loop).result()
+
+    player1.connect_to_network(server_name, port)
+
+
+def gui_action_stop_server(w, loop, server, player1: Player):
+    player1.net.close()
+    # loop.call_soon_threadsafe(stop_server, server)
+    server.server_thread.join()
+    server.server_thread = None
+    server.clean_up()
+    w.switch_menus("default")
+
+
 def main():
     p = argparse.ArgumentParser(formatter_class=argparse.MetavarTypeHelpFormatter)
     args = p.parse_args()
@@ -168,9 +335,13 @@ def main():
     w.init_window()
     game = Tic(w)
 
-    server_instance = SERVER()
-    client_instance = CLIENT(None)
+    # server_ip = socket.gethostbyname(socket.gethostname())
+    server = Server()
+    # client_instance = CLIENT(None)
     loop = asyncio.get_event_loop()
+
+    player1 = GameClient(w)
+    player2 = GameClient(w)
 
     # menu screen
 
@@ -186,15 +357,15 @@ def main():
     entries_layout.add_widget(entry_address, 50)
     entries_layout.add_widget(entry_port)
 
-    entry_address.set_entry_value("localhost")
-    entry_port.set_entry_value("8765")
+    entry_address.set_entry_value("127.0.0.1")
+    entry_port.set_entry_value(str(5555))
 
     def exit_this(_):
         w.exit()
 
     buttons_layout = nepygui.HLayout(w, orientation="C", y_start=70)
-    host_button = nepygui.Button(gradient=False, text="Host", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: start_server(btn, w, loop, server_instance))
-    connect_button = nepygui.Button(gradient=False, text="Connect", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: start_client(btn, w, client_instance))
+    host_button = nepygui.Button(gradient=False, text="Host", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_start_server(loop, server, player1, entry_address, entry_port))
+    connect_button = nepygui.Button(gradient=False, text="Connect", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_connect(player2, entry_address, entry_port))
     
     buttons_layout.add_widget(host_button)
     buttons_layout.add_widget(connect_button)
@@ -217,14 +388,14 @@ def main():
 
     # server screen
 
-    disconnect_server_button = nepygui.Button(w=300, h=50, text="Disconnect server", func=lambda btn: loop.call_soon_threadsafe(stop_server, w, server_instance))
-    disconnect_client_button = nepygui.Button(w=300, h=50, text="Disconnect client", func=lambda btn: stop_client(client_instance))
+    disconnect_server_button = nepygui.Button(w=300, h=50, text="Disconnect server", func=lambda btn: gui_action_stop_server(w, loop, server, player1))
+    disconnect_client_button = nepygui.Button(w=300, h=50, text="Disconnect client", func=lambda btn: gui_action_disconnect(w, player2))
     disconnect_server_layout = nepygui.VLayout(w, orientation="C")
     disconnect_client_layout = nepygui.VLayout(w, orientation="C")
     disconnect_server_layout.add_widget(disconnect_server_button)
     disconnect_client_layout.add_widget(disconnect_client_button)
-    server_send_message = nepygui.Button(w=200, h=50, text="Send message")
-    client_send_message = nepygui.Button(w=200, h=50, text="Send message")
+    server_send_message = nepygui.Button(w=200, h=50, text="Send message", func=lambda btn: player1.change_results())
+    client_send_message = nepygui.Button(w=200, h=50, text="Send message", func=lambda btn: player2.change_results())
     disconnect_server_layout.add_widget(server_send_message)
     disconnect_client_layout.add_widget(client_send_message)
 
