@@ -3,7 +3,7 @@ import pygame
 from python_tic_tac_toe.Colors import Color
 
 
-class Tic:
+class TicTacToe:
     def __init__(self, window) -> None:
         self.grid_thickness = 40
         self.offset = 50
@@ -17,19 +17,14 @@ class Tic:
         self.turn = 1
         self.player = "player_1"
         self.mark = ""
-        self.running = True
         self.game_running = True
-        self.mng_pressed = False
 
         self.player1_points = 0
         self.player2_points = 0
 
-        self.choice = "menu"
-        self.multiplayer_choice = "menu"
-        self.start_multiplayer = False
+        self.x_size, self.y_size = 0, 0
         self.is_running = []
         self.window = window
-        self.x_size, self.y_size = 0, 0
 
         # init
         self.calc_grid()
@@ -186,6 +181,9 @@ class Tic:
         self.set_turn()
 
     def switch_to_game(self, _):
+        for clickable in self.clickables:
+            clickable.function = self.square_clicked
+        self.return_to_menu_button.function = self.return_to_menu
         self.info_player1_points.set_text(str(self.player1_points))
         self.info_player2_points.set_text(str(self.player2_points))
         self.window.switch_menus("game")
@@ -221,8 +219,13 @@ class Tic:
 
             self.set_turn()
 
+    def square_clicked_multiplayer(self):
+        if self.player == "player_2":
+            self.player = "player_1"
+        elif self.player == "player_1":
+            self.player = "player_2"
+
     def make_new_game(self, _):
-        self.mng_pressed = True
         self.game_running = True
         self.win_screen.hide(True)
         for i in range(self.squares_num):

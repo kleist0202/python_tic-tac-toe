@@ -1,5 +1,5 @@
 from python_tic_tac_toe.Colors import Color
-from python_tic_tac_toe.TicTacToe import Tic
+from python_tic_tac_toe.TicTacToe import TicTacToe
 
 import asyncio
 import socket
@@ -13,27 +13,39 @@ class Player():
     def __init__(self, points, user_tag):
         self.points = points
         self.user_tag = user_tag
+        self.turn = "player_1"
+        self.changed = False
 
     def serialize(self):
         return {
             'points': self.points,
             'user_tag': self.user_tag,
+            'turn': self.turn,
+            'changed': self.changed,
         }
 
     def __repr__(self) -> str:
-        return f"Player({self.points}, {self.user_tag})"
+        return f"Player({self.points=}, {self.user_tag=}, {self.turn=}, {self.changed=})"
+
+    def update(self):
+        pass
 
     @classmethod
     def deserialize(cls, data):
         points = data['points']
         user_tag = data['user_tag']
+        turn = data['turn']
+        changed = data['changed']
         player = cls(points, user_tag)
+        player.turn = turn
+        player.changed = changed
         return player
 
 
 class Network:
     def __init__(self, user_tag, server, port, w):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.settimeout(2)
         # self.server = socket.gethostbyname(socket.gethostname())
         self.server = server
         self.port = port
@@ -51,14 +63,9 @@ class Network:
             self.client.send(pickle.dumps(user_tag))
 
             player_data = self.client.recv(2048)
-            # print("Player data: ", player_data)
             self.plr = pickle.loads(player_data)
-            # print("Player: ", self.plr)
 
-            if user_tag == "player1":
-                self.window.switch_menus("host")
-            else:
-                self.window.switch_menus("client")
+            self.window.switch_menus("game")
 
             return self.plr
         except Exception as e:
@@ -69,29 +76,33 @@ class Network:
     def send(self, data):
         try:
             self.client.send(pickle.dumps(data.serialize()))
-            received_data = self.client.recv(2048)
-            print("RECEIVED")
-            print(pickle.loads(received_data))
+            try:
+                received_data = self.client.recv(2048)
+            except Exception as e:
+                print(e)
             if not received_data:
                 print("No data received from the server")
                 return []
             return [
                 Player.deserialize(p_data) for p_data in pickle.loads(received_data)
             ]
-        except Exception as e:
-            print(e)
-            self.client.close()
-            return []
         except socket.error as e:
+            print("WAT SOCKET ERROR")
             print(e)
-            self.client.close()
+            self.close()
             return []
         except EOFError:
             print("EOFError: Ran out of input")
             return []
+        except Exception as e:
+            print("WAT SOME OTHER EXCEPTION")
+            print(e)
+            self.client.close()
+            return []
 
     def close(self):
         self.client.close()
+        self.window.background_function = lambda: None
         self.window.switch_menus("default")
 
 
@@ -105,9 +116,6 @@ class ConnectionManager:
         self._next_connection_id += 1
         return conn_id
     
-    def get_all_players(self):
-        return self.players
-    
     def add_player(self, conn_id, player):
         self.players[conn_id] = player
 
@@ -119,17 +127,16 @@ class ConnectionManager:
                 break
 
     def get_player(self, player_name):
-        player_gotten = None
-        player_key = ""
-        for key, val in self.players.items():
-            if player_name == val.user_tag:
-                player_gotten = val
-                player_key = key
-                break
-        return player_key, player_gotten
+        for key, player in self.players.items():
+            if player_name == player.user_tag:
+                return key, player
+        return "", None
 
     def get_all_players_except(self, curr_player):
         return [player for id, player in self.players.items() if player.user_tag != curr_player.user_tag]
+
+    def get_all_players(self):
+        return [player for id, player in self.players.items()]
 
 
 class Server:
@@ -164,13 +171,9 @@ class Server:
         user_tag = pickle.loads(user_tag)
 
         player = self.new_player(user_tag)
-        print("NEW PLAYER:", player)
-        # print("Player: ", player)
         id = self.plr_mgr.get_new_connection_id()
         self.plr_mgr.add_player(id, player)
 
-        # player_data = player.serialize()
-        # print("PLAYERDATA", player_data)
         writer.write(pickle.dumps(player))
         await writer.drain()
 
@@ -182,20 +185,24 @@ class Server:
         try:
             while self.is_running:
                 data = await reader.read(2048)
-                # print("Data: ", data)
                 if not data:
                     break
 
                 data = pickle.loads(data)
-                _, player = self.plr_mgr.get_player(data['user_tag'])
-                player.points = data['points']
-                # print("Player: ", player)
-                other_players = self.plr_mgr.get_all_players_except(player)
-                # print("Other players: ", other_players)
-                other_players = [p.serialize() for p in other_players]
-                # print("Sending other players data:", other_players)
-                writer.write(pickle.dumps(other_players))
-                # print("Received: ", data) 
+                # _, player = self.plr_mgr.get_player(data['user_tag'])
+                # player.points = data['points']
+                # player.turn = data['turn']
+                players = self.plr_mgr.get_all_players()
+                if data["changed"]:
+                    if players:
+                        for other in players:
+                            other.changed = False
+                            if other.turn == "player_1":
+                                other.turn = "player_2"
+                            elif other.turn == "player_2":
+                                other.turn = "player_1"
+                players = [p.serialize() for p in players]
+                writer.write(pickle.dumps(players))
                 await writer.drain()
 
         except Exception as e:
@@ -204,15 +211,13 @@ class Server:
         writer.close()
         await writer.wait_closed()
 
-        if player is not None and player.user_tag == "player1":
+        if player is not None and player.user_tag == "player_1":
             self.plr_mgr.players.clear()
         else:
             self.plr_mgr.remove_player(player)
-        # if not self.is_running:
         if not self.plr_mgr.players:
             self.stop_request.set()
             self.start_request.clear()
-        # self.is_running = False
 
     async def start_server(self):
         self.start_request.clear()
@@ -233,7 +238,6 @@ class Server:
         await self.stop_request.wait()
         self.stop_request.clear()
         server.close()
-        print("waiting for server to close...")
         await server.wait_closed()
         print("server stopped yay!")
 
@@ -242,59 +246,75 @@ class Server:
 
 
 class GameClient:
-    counter = 0
-
-    def __init__(self, w):
-        self.names = ["player1", "player2"]
-        self.player_username = self.get_player_id()
+    def __init__(self, w, game):
+        self.player_username = ""
         self.net: Network = None
         self.plr: Player = None
         self.window = w
+        self.game = game
 
-    def connect_to_network(self, server, port):
-        self.net = Network(self.player_username, server, port, self.window)
+    def connect_to_network(self, player_name, server_address, port, server):
+        self.player_username = player_name
+        self.net = Network(player_name, server_address, port, self.window)
         self.plr = self.net.getP()
+        self.window.background_function = self.runner
 
-    def get_player_id(self):
-        player_id = self.names[GameClient.counter % 2]
-        GameClient.counter += 1
-        return player_id
+        for clickable in self.game.clickables:
+            clickable.function = lambda btn: self.action()
+
+        if self.player_username == "player_1":
+            self.game.return_to_menu_button.function = lambda btn: self.gui_action_stop_server(server)
+        elif self.player_username == "player_2":
+            self.game.return_to_menu_button.function = lambda btn: self.gui_action_disconnect()
 
     def update_players(self):
-        self.plr.points += 1
+        if self.net is None or self.plr is None:
+            return
         other_players = self.net.send(self.plr)
         if other_players is None:
             other_players = []
-        # self.plr.update(dt, other_players)
-        return [self.plr] + other_players
+        return other_players
 
-    def change_results(self):
+    def runner(self):
         players = self.update_players()
-        print(players)
+        if players:
+            self.game.player = players[0].turn
+        if self.plr is not None:
+            self.plr.changed = False
+        self.game.set_turn()
+    
+    def action(self):
+        self.game.square_clicked_multiplayer()
+        self.plr.changed = True
+
+    def gui_action_stop_server(self, server):
+        self.net.close()
+        # loop.call_soon_threadsafe(stop_server, server)
+        server.server_thread.join()
+        server.server_thread = None
+        server.clean_up()
+        self.window.switch_menus("default")
+
+    def gui_action_disconnect(self):
+        self.net.close()
 
 
 def run_server(loop, server):
-    # asyncio.run(server.start_server)
     asyncio.set_event_loop(loop)
     loop.run_until_complete(server.start_server())
 
 
-def gui_action_connect(player2, entry_address, entry_port):
+def gui_action_connect(game_client, entry_address, entry_port, server):
     server_name = entry_address.get_entry_value()
     port_val = entry_port.get_entry_value()
     if port_val.isdigit():
         port = int(port_val)
     else:
         return
-    player2.connect_to_network(server_name, port)
-    # w.switch_menus("client")
+    game_client.connect_to_network("player_2", server_name, port, server)
 
 
-def gui_action_disconnect(w, player2):
-    player2.net.close()
-
-
-def gui_action_start_server(loop, server, player1, entry_address, entry_port):
+def gui_action_start_server(loop, server, game_client, entry_address, entry_port):
     server_name = entry_address.get_entry_value()
     port_val = entry_port.get_entry_value()
     if port_val.isdigit():
@@ -307,16 +327,7 @@ def gui_action_start_server(loop, server, player1, entry_address, entry_port):
 
     asyncio.run_coroutine_threadsafe(server.wait_for_startup(), loop).result()
 
-    player1.connect_to_network(server_name, port)
-
-
-def gui_action_stop_server(w, loop, server, player1: Player):
-    player1.net.close()
-    # loop.call_soon_threadsafe(stop_server, server)
-    server.server_thread.join()
-    server.server_thread = None
-    server.clean_up()
-    w.switch_menus("default")
+    game_client.connect_to_network("player_1",server_name, port, server)
 
 
 def main():
@@ -333,15 +344,14 @@ def main():
 
     w.set_screen_color(*Color.Gray)
     w.init_window()
-    game = Tic(w)
+    game = TicTacToe(w)
+
+    game.init_game_grid()
 
     # server_ip = socket.gethostbyname(socket.gethostname())
     server = Server()
-    # client_instance = CLIENT(None)
     loop = asyncio.get_event_loop()
-
-    player1 = GameClient(w)
-    player2 = GameClient(w)
+    game_client = GameClient(w, game)
 
     # menu screen
 
@@ -360,25 +370,20 @@ def main():
     entry_address.set_entry_value("127.0.0.1")
     entry_port.set_entry_value(str(5555))
 
-    def exit_this(_):
-        w.exit()
-
     buttons_layout = nepygui.HLayout(w, orientation="C", y_start=70)
-    host_button = nepygui.Button(gradient=False, text="Host", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_start_server(loop, server, player1, entry_address, entry_port))
-    connect_button = nepygui.Button(gradient=False, text="Connect", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_connect(player2, entry_address, entry_port))
+    host_button = nepygui.Button(gradient=False, text="Host", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_start_server(loop, server, game_client, entry_address, entry_port))
+    connect_button = nepygui.Button(gradient=False, text="Connect", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_connect(game_client, entry_address, entry_port, server))
     
     buttons_layout.add_widget(host_button)
     buttons_layout.add_widget(connect_button)
 
     exit_layout = nepygui.HLayout(w, orientation="C", y_start=150)
-    exit_button = nepygui.Button(gradient=False, text="Quit", w=100, h=50, fontsize=18, bold=True, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=exit_this)
+    exit_button = nepygui.Button(gradient=False, text="Quit", w=100, h=50, fontsize=18, bold=True, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: w.exit())
     exit_layout.add_widget(exit_button)
 
     single_button_layout = nepygui.HLayout(w, orientation="C", y_start=-100)
     single_button = nepygui.Button(bold=True, fontsize=18, text="Single computer", w=200, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, gradient=False, func=game.switch_to_game)
     single_button_layout.add_widget(single_button)
-
-    game.init_game_grid()
 
     w.add_to_menu(labels_layout)
     w.add_to_menu(entries_layout)
@@ -386,233 +391,7 @@ def main():
     w.add_to_menu(exit_layout)
     w.add_to_menu(single_button_layout)
 
-    # server screen
-
-    disconnect_server_button = nepygui.Button(w=300, h=50, text="Disconnect server", func=lambda btn: gui_action_stop_server(w, loop, server, player1))
-    disconnect_client_button = nepygui.Button(w=300, h=50, text="Disconnect client", func=lambda btn: gui_action_disconnect(w, player2))
-    disconnect_server_layout = nepygui.VLayout(w, orientation="C")
-    disconnect_client_layout = nepygui.VLayout(w, orientation="C")
-    disconnect_server_layout.add_widget(disconnect_server_button)
-    disconnect_client_layout.add_widget(disconnect_client_button)
-    server_send_message = nepygui.Button(w=200, h=50, text="Send message", func=lambda btn: player1.change_results())
-    client_send_message = nepygui.Button(w=200, h=50, text="Send message", func=lambda btn: player2.change_results())
-    disconnect_server_layout.add_widget(server_send_message)
-    disconnect_client_layout.add_widget(client_send_message)
-
-    w.add_to_menu(disconnect_server_layout, "host")
-    w.add_to_menu(disconnect_client_layout, "client")
-
-    # add them
-
     w.main_loop()
-
-
-# class Main:
-#     def __init__(self, **kwargs):
-#         self.screen_size = kwargs.get("size", (800, 600))
-#         caption = kwargs.get("caption", "pygame window")
-#         fullscreen = kwargs.get("fullscreen", 0)
-#         resizable = kwargs.get("resizable", 0)
-#
-#         # window configuration
-#
-#         options = pygame.HWSURFACE | pygame.DOUBLEBUF
-#         if fullscreen:
-#             options |= pygame.FULLSCREEN
-#         if resizable:
-#             options |= pygame.RESIZABLE
-#
-#         self.screen = pygame.display.set_mode(self.screen_size, options)
-#         pygame.display.set_caption(caption)
-#         self.screen_color = (0, 0, 0)
-#
-#         self.clock = pygame.time.Clock()
-#
-#         # variables
-#
-#         self.delta_time = 0
-#         self.last_frame_time = pygame.time.get_ticks()
-#         self.multiplayer_option = ""
-#         self.x_size, self.y_size = self.screen_size
-#
-#         # objects
-#
-#         self.fps = Fps()
-#         self.game = TicTacToe(self.screen)
-#
-#         # game
-#
-#         self.current_count = self.count_fields(self.game.g)
-#         self.current_mng = self.game.mng_pressed
-#
-#     def main_loop(self):
-#         self.set_screen_color(*Color.Gray)
-#
-#         # menu loop
-#         # ------------------------------------------------------------- #
-#         while self.game.running:
-#             self.events()
-#             self.screen.fill(self.screen_color)
-#
-#             # scene
-#             # -------------------------------#
-#
-#             mouse_button = pygame.mouse.get_pressed()
-#             mouse_pos = pygame.mouse.get_pos()
-#             keys = pygame.key.get_pressed()
-#
-#             self.game.draw_multiplayer_menu(
-#                 self.screen, mouse_pos, mouse_button, keys, self.delta_time)
-#             # -------------------------------#
-#
-#             # fps management
-#             self.fps.fps()
-#             self.fps.show_fps(self.screen)
-#
-#             pygame.display.flip()
-#
-#             # delta time calcualtions
-#             current_frame_time = pygame.time.get_ticks()
-#             self.delta_time = (current_frame_time -
-#                                self.last_frame_time) / 1000.0
-#             self.last_frame_time = current_frame_time
-#
-#             self.clock.tick(60)
-#
-#         # multiplayer loop
-#         # ------------------------------------------------------------ #
-#
-#         if self.game.multiplayer_choice == "host":
-#             address = self.game.address_entry.get_entry_value()
-#             port = self.game.port_entry.get_entry_value()
-#             asyncio.get_event_loop().run_until_complete(
-#                 websockets.serve(self.hosted_game, address, port))
-#             asyncio.get_event_loop().run_forever()
-#         elif self.game.multiplayer_choice == "connect":
-#             address = self.game.address_entry.get_entry_value()
-#             port = self.game.port_entry.get_entry_value()
-#             uri = "ws://" + address + ":" + port
-#             asyncio.get_event_loop().run_until_complete(self.hello_host(uri))
-#         else:
-#             print("There's no such option.")
-#
-#         self.kill()
-#
-#     async def hosted_game(self, websocket, path):
-#         rt = asyncio.ensure_future(self.recive(websocket))
-#         st = asyncio.ensure_future(self.send(websocket))
-#         await self.game_loop(websocket, "player_1")
-#
-#         done, pending = await asyncio.wait(
-#             [rt, st],
-#             return_when=asyncio.FIRST_COMPLETED,
-#         )
-#         for task in pending:
-#             task.cancel()
-#
-#     async def hello_host(self, uri):
-#         async with websockets.connect(uri) as websocket:
-#             rt = asyncio.ensure_future(self.recive(websocket))
-#             st = asyncio.ensure_future(self.send(websocket))
-#             await self.game_loop(websocket, "player_2")
-#
-#             done, pending = await asyncio.wait(
-#                 [rt, st],
-#                 return_when=asyncio.FIRST_COMPLETED,
-#             )
-#             for task in pending:
-#                 task.cancel()
-#
-#     async def game_loop(self, websocket, player):
-#         print('starting game loop...')
-#         while True:
-#             self.events()
-#
-#             mouse_button = pygame.mouse.get_pressed()
-#             mouse_pos = pygame.mouse.get_pos()
-#             keys = pygame.key.get_pressed()
-#
-#             self.screen.fill(self.screen_color)
-#
-#             self.game.draw_grid(player, self.screen, mouse_pos,
-#                                 mouse_button, keys, self.delta_time)
-#             self.game.window_resize_callback(
-#                 self.screen.get_size(), self.game.calc_grid)
-#
-#             # fps management
-#             self.fps.fps()
-#             self.fps.show_fps(self.screen)
-#
-#             pygame.display.flip()
-#
-#             # delta time calcualtions
-#             current_frame_time = pygame.time.get_ticks()
-#             self.delta_time = (current_frame_time -
-#                                self.last_frame_time) / 1000.0
-#             self.last_frame_time = current_frame_time
-#
-#             # self.clock.tick(60)
-#             await asyncio.sleep(0.01)
-#
-#     async def recive(self, websocket):
-#         print('starting rcv loop...')
-#         while True:
-#             msg = await websocket.recv()
-#             msg = pickle.loads(msg)
-#             self.game.g, self.game.turn, mng_pressed = msg
-#             if mng_pressed:
-#                 self.game.make_new_game()
-#             self.game.mng_pressed = False
-#
-#             print("receive")
-#             await asyncio.sleep(0.01)
-#
-#     async def send(self, websocket):
-#         print('starting send loop...')
-#         while True:
-#             if self.current_count != self.count_fields(self.game.g) or self.current_mng != self.game.mng_pressed:
-#                 data = [self.game.g, self.game.turn,
-#                         self.game.mng_pressed]
-#                 await websocket.send(pickle.dumps(data))
-#                 print("send")
-#                 self.current_count = self.count_fields(self.game.g)
-#                 self.current_mng = self.game.mng_pressed
-#                 self.game.mng_pressed = False
-#             await asyncio.sleep(0.01)
-#
-#     def count_fields(self, L):
-#         count = 0
-#         for i in range(3):
-#             for j in range(3):
-#                 if L[i][j] == "":
-#                     count += 1
-#         return count
-#
-#     def events(self):
-#         for event in pygame.event.get():
-#             if event.type == pygame.QUIT:
-#                 self.game.running = False
-#             elif event.type == pygame.KEYDOWN:
-#                 if event.key == pygame.K_ESCAPE:
-#                     self.game.running = False
-#
-#     def set_screen_color(self, r, g, b):
-#         self.screen_color = (r, g, b)
-#
-#     @ staticmethod
-#     def kill():
-#         pygame.quit()
-#         sys.exit()
-#
-#
-# def main():
-#     pygame.init()
-#     info = pygame.display.Info()
-#     SCREENSIZE = (info.current_w, info.current_h)
-#     SCREENSIZE = (600, 600)
-#     CAPTION = "TIC TAC TOE"
-#     Main(size=SCREENSIZE, caption=CAPTION, resizable=True,
-#          fullscreen=False).main_loop()
 
 
 if __name__ == "__main__":
