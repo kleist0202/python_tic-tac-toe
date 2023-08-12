@@ -1,6 +1,6 @@
 import nepygui
 import pygame
-from python_tic_tac_toe.Colors import Color
+from python_tic_tac_toe.colors import Color
 
 
 class TicTacToe:
@@ -11,8 +11,8 @@ class TicTacToe:
         self.clickables = []
         self.vertical_lines = []
         self.horizontal_lines = []
-        self.g = [["" for i in range(self.squares_num)]
-                  for j in range(self.squares_num)]
+        self.board = [["" for _ in range(self.squares_num)]
+                  for _ in range(self.squares_num)]
 
         self.turn = 1
         self.player = "player_1"
@@ -158,7 +158,7 @@ class TicTacToe:
 
         # new game button
         self.new_game_button = nepygui.Button(
-            w=100, h=30, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=self.make_new_game)
+                w=100, h=30, text="New game", bordercolor=Color.Black, gradient=False, fill=Color.DarkGray, func=lambda btn: self.make_new_game)
         self.new_game_layout = nepygui.HLayout(self.window, "SW", 10, -10)
         self.new_game_layout.add_widget(self.new_game_button)
         self.new_game_button.block(True)
@@ -183,10 +183,14 @@ class TicTacToe:
     def switch_to_game(self, _):
         for clickable in self.clickables:
             clickable.function = self.square_clicked
+        self.new_game_button.function = lambda btn: self.make_new_game()
         self.return_to_menu_button.function = self.return_to_menu
+        self.turn = "player_1"
+        self.clear_points()
         self.info_player1_points.set_text(str(self.player1_points))
         self.info_player2_points.set_text(str(self.player2_points))
         self.window.switch_menus("game")
+        self.make_new_game()
     
     def square_clicked(self, button):
         i_noted = 0
@@ -203,12 +207,10 @@ class TicTacToe:
         if button.get_mark() == "":
             if self.player == "player_1":
                 button.set_mark("X")
-                self.g[i_noted][j_noted] = "X"
+                self.board[i_noted][j_noted] = "X"
             elif self.player == "player_2":
                 button.set_mark("O")
-                self.g[i_noted][j_noted] = "O"
-            else:
-                raise Exception
+                self.board[i_noted][j_noted] = "O"
 
             self.check_result()
 
@@ -219,20 +221,46 @@ class TicTacToe:
 
             self.set_turn()
 
-    def square_clicked_multiplayer(self):
-        if self.player == "player_2":
-            self.player = "player_1"
-        elif self.player == "player_1":
-            self.player = "player_2"
-
-    def make_new_game(self, _):
-        self.game_running = True
-        self.win_screen.hide(True)
+    def square_clicked_multiplayer(self, button, player_name):
+        if player_name != self.player:
+            return
+        i_noted = 0
+        j_noted = 0
         for i in range(self.squares_num):
             for j in range(self.squares_num):
-                self.g[i][j] = ""
-                self.clickables[i * 3 + j].set_mark("")
+                current_index = i * 3 + j
+                temp_clickable = self.clickables[current_index]
+                if id(button) == id(temp_clickable):
+                    i_noted = i
+                    j_noted = j
+                    break
+        if button.get_mark() == "":
+            if self.player == "player_1":
+                self.board[i_noted][j_noted] = "X"
+            elif self.player == "player_2":
+                self.board[i_noted][j_noted] = "O"
 
+            # if self.player == "player_2":
+            #     self.player = "player_1"
+            # elif self.player == "player_1":
+            #     self.player = "player_2"
+            return True
+        return False
+
+    def refresh_board(self):
+        for i in range(self.squares_num):
+            for j in range(self.squares_num):
+                current_index = i * 3 + j
+                text = self.board[i][j]
+                self.clickables[current_index].set_mark(text)
+
+    def make_new_game(self):
+        self.clean_board()
+        self.unblock_board()
+    
+    def unblock_board(self):
+        self.game_running = True
+        self.win_screen.hide(True)
         for clickable in self.clickables:
             clickable.block(False)
 
@@ -242,7 +270,7 @@ class TicTacToe:
         self.player1_points = 0
         self.player2_points = 0
         self.window.switch_menus("default")
-        self.make_new_game(None)
+        self.make_new_game()
 
     def set_turn(self):
         if self.player == "player_1":
@@ -255,7 +283,7 @@ class TicTacToe:
             raise Exception
 
     def check_result(self):
-        if self.check_vertical(self.g, "X") or self.check_horizontal(self.g, "X") or self.check_diagonally(self.g, "X"):
+        if self.check_vertical(self.board, "X") or self.check_horizontal(self.board, "X") or self.check_diagonally(self.board, "X"):
             if self.game_running:
                 self.resize_grid()
                 self.player1_points += 1
@@ -263,7 +291,7 @@ class TicTacToe:
                 self.win_screen.set_color(Color.Blue)
             self.game_running = False
             self.win_screen.set_size(w=self.x_size, h=50)
-        elif self.check_vertical(self.g, "O") or self.check_horizontal(self.g, "O") or self.check_diagonally(self.g, "O"):
+        elif self.check_vertical(self.board, "O") or self.check_horizontal(self.board, "O") or self.check_diagonally(self.board, "O"):
             if self.game_running:
                 self.resize_grid()
                 self.player2_points += 1
@@ -310,9 +338,22 @@ class TicTacToe:
     def draw_check(self):
         for i in range(self.squares_num):
             for j in range(self.squares_num):
-                if self.g[i][j] == "":
+                if self.board[i][j] == "":
                     return False
         return True
+
+    def is_board_empty(self):
+        return all(cell == "" for row in self.board for cell in row)
+
+    def clean_board(self):
+        for i in range(self.squares_num):
+            for j in range(self.squares_num):
+                self.board[i][j] = ""
+                self.clickables[i * 3 + j].set_mark("")
+
+    def clear_points(self):
+        self.player1_points = 0
+        self.player2_points = 0
 
 
 class Clickable(nepygui.Button):
