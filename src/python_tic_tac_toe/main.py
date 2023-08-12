@@ -103,7 +103,11 @@ class ConnectionManager:
         return "", None
 
     def get_all_players_except(self, curr_player):
-        return [player for id, player in self.players.items() if player.user_tag != curr_player.user_tag]
+        return [
+            player
+            for id, player in self.players.items()
+            if player.user_tag != curr_player.user_tag
+        ]
 
     def get_all_players(self):
         return [player for id, player in self.players.items()]
@@ -148,7 +152,7 @@ class Server:
         await writer.drain()
 
         # Get the client's address
-        client_address = writer.get_extra_info('peername')
+        client_address = writer.get_extra_info("peername")
         print(f"Connected to: {client_address}")
 
         self.is_running = True
@@ -207,7 +211,7 @@ class Server:
             return
 
         addr = server.sockets[0].getsockname()
-        print(f'Serving on {addr}')
+        print(f"Serving on {addr}")
 
         # async with server:
         #     await server.serve_forever()
@@ -242,9 +246,13 @@ class GameClient:
         self.game.new_game_button.function = lambda btn: self.new_game()
 
         if self.player_username == "player_1":
-            self.game.return_to_menu_button.function = lambda btn: self.gui_action_stop_server(server)
+            self.game.return_to_menu_button.function = (
+                lambda btn: self.gui_action_stop_server(server)
+            )
         elif self.player_username == "player_2":
-            self.game.return_to_menu_button.function = lambda btn: self.gui_action_disconnect()
+            self.game.return_to_menu_button.function = (
+                lambda btn: self.gui_action_disconnect()
+            )
 
     def update_players(self):
         if self.net is None or self.plr is None:
@@ -270,7 +278,7 @@ class GameClient:
         self.game.check_result()
         if self.game.is_board_empty():
             self.game.unblock_board()
-    
+
     def action(self, btn):
         changed = self.game.square_clicked_multiplayer(btn, self.plr.user_tag)
         self.plr.board = self.game.board
@@ -319,12 +327,18 @@ def gui_action_start_server(loop, server, game_client, entry_address, entry_port
     else:
         return
     server.set_address_and_port(server_name, port)
-    server.server_thread = threading.Thread(target=run_server, args=(loop, server,))
+    server.server_thread = threading.Thread(
+        target=run_server,
+        args=(
+            loop,
+            server,
+        ),
+    )
     server.server_thread.start()
 
     asyncio.run_coroutine_threadsafe(server.wait_for_startup(), loop).result()
 
-    game_client.connect_to_network("player_1",server_name, port, server)
+    game_client.connect_to_network("player_1", server_name, port, server)
 
 
 def main():
@@ -368,18 +382,66 @@ def main():
     entry_port.set_entry_value(str(5555))
 
     buttons_layout = nepygui.HLayout(w, orientation="C", y_start=70)
-    host_button = nepygui.Button(gradient=False, text="Host", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_start_server(loop, server, game_client, entry_address, entry_port))
-    connect_button = nepygui.Button(gradient=False, text="Connect", fontsize=18, bold=True, w=175, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: gui_action_connect(game_client, entry_address, entry_port, server))
-    
+    host_button = nepygui.Button(
+        gradient=False,
+        text="Host",
+        fontsize=18,
+        bold=True,
+        w=175,
+        h=50,
+        fill=Color.DarkGray,
+        borderthickness=2,
+        bordercolor=Color.Black,
+        func=lambda btn: gui_action_start_server(
+            loop, server, game_client, entry_address, entry_port
+        ),
+    )
+    connect_button = nepygui.Button(
+        gradient=False,
+        text="Connect",
+        fontsize=18,
+        bold=True,
+        w=175,
+        h=50,
+        fill=Color.DarkGray,
+        borderthickness=2,
+        bordercolor=Color.Black,
+        func=lambda btn: gui_action_connect(
+            game_client, entry_address, entry_port, server
+        ),
+    )
+
     buttons_layout.add_widget(host_button)
     buttons_layout.add_widget(connect_button)
 
     exit_layout = nepygui.HLayout(w, orientation="C", y_start=150)
-    exit_button = nepygui.Button(gradient=False, text="Quit", w=100, h=50, fontsize=18, bold=True, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, func=lambda btn: w.exit())
+    exit_button = nepygui.Button(
+        gradient=False,
+        text="Quit",
+        w=100,
+        h=50,
+        fontsize=18,
+        bold=True,
+        fill=Color.DarkGray,
+        borderthickness=2,
+        bordercolor=Color.Black,
+        func=lambda btn: w.exit(),
+    )
     exit_layout.add_widget(exit_button)
 
     single_button_layout = nepygui.HLayout(w, orientation="C", y_start=-100)
-    single_button = nepygui.Button(bold=True, fontsize=18, text="Single computer", w=200, h=50, fill=Color.DarkGray, borderthickness=2, bordercolor=Color.Black, gradient=False, func=game.switch_to_game)
+    single_button = nepygui.Button(
+        bold=True,
+        fontsize=18,
+        text="Single computer",
+        w=200,
+        h=50,
+        fill=Color.DarkGray,
+        borderthickness=2,
+        bordercolor=Color.Black,
+        gradient=False,
+        func=game.switch_to_game,
+    )
     single_button_layout.add_widget(single_button)
 
     w.add_to_menu(labels_layout)
