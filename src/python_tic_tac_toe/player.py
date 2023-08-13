@@ -1,5 +1,5 @@
 class Player:
-    def __init__(self, points, user_tag):
+    def __init__(self, points: int, user_tag: str) -> None:
         self.points = points
         self.user_tag = user_tag
         self.turn = "player_1"
@@ -25,7 +25,7 @@ class Player:
         )
 
     @classmethod
-    def deserialize(cls, data):
+    def deserialize(cls, data) -> "Player":
         points = data["points"]
         user_tag = data["user_tag"]
         turn = data["turn"]

@@ -1,3 +1,4 @@
+from typing import List
 import nepygui
 import pygame
 from python_tic_tac_toe.colors import Color
@@ -5,32 +6,34 @@ from python_tic_tac_toe.colors import Color
 
 class TicTacToe:
     def __init__(self, window) -> None:
-        self.grid_thickness = 40
-        self.offset = 50
-        self.squares_num = 3
-        self.clickables = []
-        self.vertical_lines = []
-        self.horizontal_lines = []
-        self.board = [
+        self.grid_thickness: int = 40
+        self.offset: int = 50
+        self.squares_num: int = 3
+        self.clickables: List[Clickable] = []
+        self.vertical_lines: List[nepygui.Frame] = []
+        self.horizontal_lines: List[nepygui.Frame] = []
+        self.board: List[List[str]] = [
             ["" for _ in range(self.squares_num)] for _ in range(self.squares_num)
         ]
 
-        self.turn = 1
-        self.player = "player_1"
-        self.mark = ""
-        self.game_running = True
+        self.player: str = "player_1"
+        self.mark: str = ""
+        self.game_running: bool = True
 
-        self.player1_points = 0
-        self.player2_points = 0
+        self.player1_points: int = 0
+        self.player2_points: int = 0
 
-        self.x_size, self.y_size = 0, 0
-        self.is_running = []
-        self.window = window
+        self.x_size: int = 0
+        self.y_size: int = 0
+        self.x_offset: float = 0.0
+        self.y_offset: float = 0.0
+
+        self.window: nepygui.Window = window
 
         # init
         self.calc_grid()
 
-    def calc_grid(self):
+    def calc_grid(self) -> None:
         self.x_size, self.y_size = self.window.get_screen().get_size()
         self.y_offset = self.offset
 
@@ -54,7 +57,7 @@ class TicTacToe:
         if self.square_size - self.grid_thickness < 1:
             self.square_size = self.grid_thickness
 
-    def resize_grid(self):
+    def resize_grid(self) -> None:
         self.calc_grid()
         for i in range(self.squares_num):
             for j in range(self.squares_num):
@@ -85,7 +88,7 @@ class TicTacToe:
         self.win_screen.set_pos(0, self.y_size // 2 - 50 // 2)
         self.win_screen.set_size(w=self.x_size, h=self.win_screen.h)
 
-    def init_game_grid(self):
+    def init_game_grid(self) -> None:
         # draw game
         # horizontal lines
         for i in range(4):
@@ -245,19 +248,20 @@ class TicTacToe:
         # turn init
         self.set_turn()
 
-    def switch_to_game(self, _):
+    def switch_to_game(self) -> None:
         for clickable in self.clickables:
             clickable.function = self.square_clicked
         self.new_game_button.function = lambda btn: self.make_new_game()
         self.return_to_menu_button.function = self.return_to_menu
-        self.turn = "player_1"
+        self.player = "player_1"
+        self.set_turn()
         self.clear_points()
         self.info_player1_points.set_text(str(self.player1_points))
         self.info_player2_points.set_text(str(self.player2_points))
         self.window.switch_menus("game")
         self.make_new_game()
 
-    def square_clicked(self, button):
+    def square_clicked(self, button: nepygui.Button) -> None:
         i_noted = 0
         j_noted = 0
         for i in range(self.squares_num):
@@ -286,9 +290,9 @@ class TicTacToe:
 
             self.set_turn()
 
-    def square_clicked_multiplayer(self, button, player_name):
+    def square_clicked_multiplayer(self, button: nepygui.Button, player_name: str) -> bool:
         if player_name != self.player:
-            return
+            return False
         i_noted = 0
         j_noted = 0
         for i in range(self.squares_num):
