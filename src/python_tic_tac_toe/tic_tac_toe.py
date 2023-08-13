@@ -1,7 +1,7 @@
 from typing import List
 import nepygui
 import pygame
-from python_tic_tac_toe.colors import Color
+from nepygui.colors import Colors as Color
 
 
 class TicTacToe:

@@ -1,5 +1,4 @@
 from typing import Dict, List, Optional, Tuple
-from python_tic_tac_toe.colors import Color
 from python_tic_tac_toe.tic_tac_toe import TicTacToe
 from python_tic_tac_toe.player import Player
 
@@ -9,6 +8,7 @@ import pickle
 import nepygui
 import argparse
 import threading
+from nepygui.colors import Colors as Color
 
 
 class Server:
